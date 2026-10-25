@@ -2,41 +2,71 @@
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
   
-  /* Color Palette - Forest & Amber (Scout & Education vibe) */
-  --primary: #15803d;
-  --primary-hover: #166534;
-  --primary-light: #dcfce7;
-  --primary-text: #14532d;
+  /* ========================================================
+     PALETA NEOFARO + NATURALEZA + EDUCACIÓN (POR DEFECTO)
+     - NeoFaro: Obsidian night canvas, Glowing Cyan Beacon (#06b6d4, #22d3ee)
+     - Naturaleza: Emerald & Jade Forest (#10b981, #059669, #34d399)
+     - Educación: Wisdom Amber & Gold (#f59e0b, #fbbf24)
+     ======================================================== */
   
-  --secondary: #d97706;
-  --secondary-hover: #b45309;
-  --secondary-light: #fef3c7;
+  /* Naturaleza & Scout (Primary Action) */
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: rgba(16, 185, 129, 0.16);
+  --primary-text: #34d399;
   
-  --accent-blue: #0284c7;
-  --accent-blue-light: #e0f2fe;
-  --accent-purple: #7c3aed;
-  --accent-purple-light: #f3e8ff;
-  --accent-rose: #e11d48;
-  --accent-rose-light: #ffe4e6;
+  /* Educación & Sabiduría (Secondary & Milestones) */
+  --secondary: #f59e0b;
+  --secondary-hover: #d97706;
+  --secondary-light: rgba(245, 158, 11, 0.18);
+  --secondary-text: #fbbf24;
   
-  --bg-app: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-sidebar: #0f172a;
-  --bg-sidebar-hover: #1e293b;
-  --bg-input: #f1f5f9;
+  /* Faro del Conocimiento (Cyan Beam & Guía - estilo neofaro.com.ar) */
+  --faro-cyan: #06b6d4;
+  --faro-cyan-hover: #0891b2;
+  --faro-cyan-light: #22d3ee;
+  --faro-cyan-bg: rgba(6, 182, 212, 0.14);
+  --faro-glow: 0 0 24px rgba(6, 182, 212, 0.3);
   
-  --border-color: #e2e8f0;
-  --border-focus: #15803d;
+  /* Accents */
+  --accent-blue: #0ea5e9;
+  --accent-blue-light: rgba(14, 165, 233, 0.16);
+  --accent-purple: #8b5cf6;
+  --accent-purple-light: rgba(139, 92, 246, 0.16);
+  --accent-rose: #f43f5e;
+  --accent-rose-light: rgba(244, 63, 94, 0.16);
   
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-inverse: #ffffff;
+  /* NeoFaro Obsidian Night Surfaces */
+  --bg-app: #080c14;
+  --bg-surface: #0e1524;
+  --bg-card: #121c2e;
+  --bg-sidebar: #06090f;
+  --bg-sidebar-hover: #142036;
+  --bg-input: #0b1120;
   
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  /* Borders & Glassmorphic Highlights */
+  --border-color: #1e2d44;
+  --border-focus: #06b6d4;
+  --border-faro: rgba(6, 182, 212, 0.3);
+  --border-nature: rgba(16, 185, 129, 0.3);
+  
+  /* Text */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --text-inverse: #080c14;
+  
+  /* Shadows & Ambient Glows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-md: 0 4px 14px -1px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(6, 182, 212, 0.1);
+  --shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(16, 185, 129, 0.12);
+  --shadow-xl: 0 24px 38px -6px rgba(0, 0, 0, 0.7), 0 0 24px rgba(6, 182, 212, 0.15);
+  
+  /* Gradients */
+  --gradient-faro: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+  --gradient-nature: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-edu: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(14, 21, 36, 0.95) 100%);
   
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -46,61 +76,81 @@
   --font-scale: 1rem;
 }
 
+[data-theme="neofaro"] {
+  /* Aligns with :root NeoFaro Nature & Education scheme */
+  --bg-app: #080c14;
+  --bg-surface: #0e1524;
+  --bg-card: #121c2e;
+  --bg-sidebar: #06090f;
+  --bg-sidebar-hover: #142036;
+  --bg-input: #0b1120;
+  --border-color: #1e2d44;
+  --border-focus: #06b6d4;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --primary: #10b981;
+  --primary-text: #34d399;
+  --secondary: #f59e0b;
+}
+
+[data-theme="light"] {
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-light: #d1fae5;
+  --primary-text: #065f46;
+  
+  --secondary: #d97706;
+  --secondary-hover: #b45309;
+  --secondary-light: #fef3c7;
+  --secondary-text: #92400e;
+  
+  --faro-cyan: #0891b2;
+  --faro-cyan-light: #06b6d4;
+  --faro-cyan-bg: #e0f2fe;
+  
+  --bg-app: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-sidebar: #0f172a;
+  --bg-sidebar-hover: #1e293b;
+  --bg-input: #f8fafc;
+  
+  --border-color: #cbd5e1;
+  --border-focus: #059669;
+  
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  --text-inverse: #ffffff;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
+}
+
 [data-theme="dark"] {
-  --primary: #22c55e;
-  --primary-hover: #16a34a;
-  --primary-light: #052e16;
-  --primary-text: #86efac;
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: rgba(16, 185, 129, 0.2);
+  --primary-text: #34d399;
   
   --secondary: #f59e0b;
   --secondary-hover: #d97706;
-  --secondary-light: #451a03;
+  --secondary-light: rgba(245, 158, 11, 0.2);
   
-  --accent-blue: #38bdf8;
-  --accent-blue-light: #082f49;
-  --accent-purple: #a855f7;
-  --accent-purple-light: #3b0764;
-  --accent-rose: #fb7185;
-  --accent-rose-light: #4c0519;
+  --bg-app: #080c14;
+  --bg-surface: #0e1524;
+  --bg-card: #121c2e;
+  --bg-sidebar: #06090f;
+  --bg-sidebar-hover: #142036;
+  --bg-input: #0b1120;
   
-  --bg-app: #090d16;
-  --bg-surface: #111827;
-  --bg-card: #172033;
-  --bg-sidebar: #080c14;
-  --bg-sidebar-hover: #162032;
-  --bg-input: #1e293b;
-  
-  --border-color: #27354f;
-  --border-focus: #22c55e;
+  --border-color: #1e2d44;
+  --border-focus: #06b6d4;
   
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --text-inverse: #090d16;
-  
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="forest"] {
-  --primary: #15803d;
-  --primary-hover: #14532d;
-  --primary-light: #dcfce7;
-  --primary-text: #166534;
-  
-  --secondary: #b45309;
-  --secondary-hover: #92400e;
-  --secondary-light: #fef3c7;
-  
-  --bg-app: #f4f6f0;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-sidebar: #193321;
-  --bg-sidebar-hover: #264a32;
-  --bg-input: #ecf0e7;
-  
-  --border-color: #d7e0d2;
-  --border-focus: #15803d;
+  --text-inverse: #080c14;
 }
 
 [data-font-size="large"] {

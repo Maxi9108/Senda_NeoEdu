@@ -291,7 +291,7 @@ export const AppProvider = ({ children }) => {
   });
 
   // Accessibility & Visual settings
-  const [theme, setTheme] = useState(() => localStorage.getItem('senda_theme') || 'forest');
+  const [theme, setTheme] = useState(() => localStorage.getItem('senda_theme') || 'neofaro');
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('senda_font_size') || 'normal');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -302,6 +302,7 @@ export const AppProvider = ({ children }) => {
   const [orgCustomizationModalOpen, setOrgCustomizationModalOpen] = useState(false);
   const [privateAccessModal, setPrivateAccessModal] = useState({ isOpen: false, folderName: '' });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [institutionExplorerOpen, setInstitutionExplorerOpen] = useState(false);
 
   // Load from Google Sheets on startup if available
   useEffect(() => {
@@ -1069,6 +1070,128 @@ export const AppProvider = ({ children }) => {
     return newApplicant;
   };
 
+  // Personal account registration (Pure individual registration without institution upfront)
+  const registerPersonalAccount = (userData) => {
+    const existing = (data.members || []).find(m => m.email?.toLowerCase().trim() === userData.email?.toLowerCase().trim());
+    if (existing && existing.password) {
+      return { success: false, error: 'Ya existe una cuenta registrada con este correo electrónico.' };
+    }
+
+    const calculatedUserAge = userData.birthDate ? calculateAge(userData.birthDate) : (userData.age || null);
+    const newPersonalUser = {
+      id: `usr-${Date.now()}`,
+      name: userData.name.trim(),
+      email: userData.email.trim(),
+      phone: userData.phone?.trim() || '',
+      password: userData.password || '123456',
+      birthDate: userData.birthDate || '',
+      age: calculatedUserAge,
+      role: 'parent',
+      roleLabel: 'Usuario de la Comunidad',
+      status: 'active',
+      orgId: null,
+      orgIds: [],
+      avatar: userData.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userData.name)}`,
+      showPublicPhone: false,
+      showPublicEmail: false,
+      presentation: {
+        aboutMe: userData.aboutMe || '',
+        wishes: userData.wishes || '',
+        interests: userData.interests || '',
+        registeredAt: new Date().toLocaleDateString('es-AR')
+      }
+    };
+
+    setData(prev => ({
+      ...prev,
+      members: [newPersonalUser, ...(prev.members || [])]
+    }));
+
+    // Auto-login
+    login(userData.email.trim(), userData.password || '123456');
+
+    // Automatically open the Institutional Explorer to guide user to connect with an institution
+    setInstitutionExplorerOpen(true);
+
+    return { success: true, user: newPersonalUser };
+  };
+
+  // Affiliation request from logged-in user to an existing institution/group (Requires adult approval)
+  const requestAffiliationToOrg = ({ orgId, role, branchIds, jurisdiction, message }) => {
+    if (!currentUser) return { success: false, error: 'Debes iniciar sesión para solicitar ingreso a una institución.' };
+
+    const targetOrg = (data.organizations || []).find(o => o.id === orgId);
+    if (!targetOrg) return { success: false, error: 'Institución no encontrada.' };
+
+    const userEmail = (currentUser.email || '').toLowerCase().trim();
+    // Check if already an active member of this institution
+    const alreadyMember = (data.members || []).find(m => m.orgId === orgId && m.email?.toLowerCase().trim() === userEmail && m.status === 'active');
+    if (alreadyMember) {
+      return { success: false, error: `Ya eres miembro activo de ${targetOrg.name}.` };
+    }
+
+    // Check if pending request already exists
+    const existingPending = (data.members || []).find(m => m.orgId === orgId && m.email?.toLowerCase().trim() === userEmail && m.status === 'pending');
+    if (existingPending) {
+      return { success: false, error: `Ya tienes una solicitud pendiente para ${targetOrg.name}. Está esperando la autorización de sus adultos.` };
+    }
+
+    const roleLabels = {
+      admin: 'Responsable Solicitante',
+      educator: 'Educador Postulante',
+      parent: 'Familia Postulante',
+      student: 'Protagonista Aspirante',
+      regional_authority: 'Autoridad Regional / Supervisión Distrital'
+    };
+
+    const isRegAuth = role === 'regional_authority';
+    const newAffiliationRequest = {
+      id: `mem-aff-${Date.now()}`,
+      orgId: orgId,
+      orgIds: [orgId],
+      name: currentUser.name,
+      email: currentUser.email,
+      phone: currentUser.phone || '',
+      birthDate: currentUser.birthDate || '',
+      age: currentUser.age || null,
+      role: isRegAuth ? 'admin' : (role || 'parent'),
+      roleLabel: roleLabels[role] || 'Postulante',
+      branchId: branchIds?.[0] || targetOrg.folders?.[1]?.id || 'f-general',
+      branchIds: branchIds || (targetOrg.folders?.[1]?.id ? [targetOrg.folders[1].id] : []),
+      jurisdiction: jurisdiction || '',
+      isRegionalAuthority: isRegAuth,
+      status: 'pending', // Awaiting adult authorization
+      avatar: currentUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(currentUser.name)}`,
+      showPublicPhone: false,
+      showPublicEmail: false,
+      password: currentUser.password || '123456',
+      presentation: {
+        ...(currentUser.presentation || {}),
+        affiliationMessage: message || '',
+        requestedAt: new Date().toLocaleDateString('es-AR')
+      }
+    };
+
+    setData(prev => ({
+      ...prev,
+      members: [newAffiliationRequest, ...(prev.members || [])]
+    }));
+
+    return { 
+      success: true, 
+      message: `Solicitud enviada a los adultos y autoridades de ${targetOrg.name}. Una vez autorizada podrás ingresar.` 
+    };
+  };
+
+  // Cancel or withdraw an affiliation request
+  const cancelAffiliationRequest = (requestId) => {
+    setData(prev => ({
+      ...prev,
+      members: (prev.members || []).filter(m => m.id !== requestId)
+    }));
+    return { success: true };
+  };
+
   // Announcements Management
   const addAnnouncement = (ann) => {
     const newAnn = {
@@ -1735,6 +1858,11 @@ export const AppProvider = ({ children }) => {
         orgHasAuthority,
         assignAuthorityToOrg,
         updateMemberBranches,
+        institutionExplorerOpen,
+        setInstitutionExplorerOpen,
+        registerPersonalAccount,
+        requestAffiliationToOrg,
+        cancelAffiliationRequest,
         // Organization Customization
         updateOrgCustomization,
         orgCustomizationModalOpen,

@@ -19,6 +19,7 @@ import { ShareModal } from './components/ShareModal';
 import { AuthGate } from './components/AuthGate';
 import { ItemModal } from './components/ItemModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { InstitutionExplorerModal } from './components/InstitutionExplorerModal';
 import { Lock } from 'lucide-react';
 
 const PrivateAccessModal = () => {
@@ -99,6 +100,9 @@ const MainLayout = () => {
     currentTab, 
     setCurrentTab,
     currentOrg,
+    currentUser,
+    availableUserOrgs,
+    setInstitutionExplorerOpen,
     isLoggedIn, 
     previewRole, 
     setPreviewRole, 
@@ -130,6 +134,7 @@ const MainLayout = () => {
   }
 
   const lacksAuthority = currentOrg && orgHasAuthority && !orgHasAuthority(currentOrg.id);
+  const hasNoOrgs = isLoggedIn && availableUserOrgs && availableUserOrgs.length === 0;
 
   return (
     <div style={{
@@ -142,6 +147,50 @@ const MainLayout = () => {
       overflow: 'hidden'
     }}>
       <Navbar />
+
+      {/* Unlinked User Onboarding Banner */}
+      {hasNoOrgs && (
+        <div style={{
+          background: 'var(--gradient-hero)',
+          borderBottom: '1px solid var(--border-faro)',
+          padding: '0.65rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          zIndex: 40,
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '1.1rem' }}>🧭</span>
+            <span style={{ fontWeight: 700, fontSize: '0.84rem', color: 'var(--text-main)' }}>
+              ¡Bienvenido/a {currentUser?.name || ''}!
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Aún no estás vinculado a una institución o grupo activo. Explorá la red para solicitar tu ingreso con autorización de adultos o fundá tu sede.
+            </span>
+          </div>
+          <button
+            onClick={() => setInstitutionExplorerOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.4rem 0.85rem',
+              background: 'var(--gradient-faro)',
+              color: '#ffffff',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            <span>🏛️ Explorar o Fundar Institución</span>
+          </button>
+        </div>
+      )}
 
       {/* Missing Authority Supervision Banner */}
       {lacksAuthority && (
@@ -280,6 +329,7 @@ const MainLayout = () => {
       <UserProfileModal />
       <OrgCustomizationModal />
       <PrivateAccessModal />
+      <InstitutionExplorerModal />
     </div>
   );
 };

@@ -23,7 +23,8 @@ import {
   ExternalLink, 
   Star, 
   UserCheck,
-  Eye
+  Eye,
+  Building2
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -45,6 +46,7 @@ export const Navbar = () => {
     setBackupModalOpen,
     setShareModalOpen,
     setOrgCustomizationModalOpen,
+    setInstitutionExplorerOpen,
     currentUser,
     currentUserRole,
     isAdmin,
@@ -259,6 +261,30 @@ export const Navbar = () => {
             ))}
           </select>
         </div>
+
+        {/* Explorar Instituciones / Grupos button */}
+        <button
+          type="button"
+          onClick={() => setInstitutionExplorerOpen(true)}
+          title="Buscar instituciones para unirse o fundar una nueva"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            background: 'var(--faro-cyan-bg)',
+            border: '1px solid var(--border-faro)',
+            color: 'var(--faro-cyan-light)',
+            padding: '0.28rem 0.55rem',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          <Building2 size={13} />
+          <span>Instituciones</span>
+        </button>
 
         {/* Active Folder Tag */}
         {activeFolderId !== 'all' && activeFolder && (
@@ -487,9 +513,8 @@ export const Navbar = () => {
         {/* Theme cycle */}
         <button
           onClick={() => {
-            if (theme === 'forest') setTheme('light');
-            else if (theme === 'light') setTheme('dark');
-            else setTheme('forest');
+            if (theme === 'neofaro' || theme === 'forest') setTheme('light');
+            else setTheme('neofaro');
           }}
           title={`Cambiar tema visual (actual: ${theme})`}
           style={{
@@ -504,7 +529,11 @@ export const Navbar = () => {
             color: 'var(--text-main)'
           }}
         >
-          {theme === 'forest' ? <Trees size={13} style={{ color: '#15803d' }} /> : theme === 'dark' ? <Moon size={13} style={{ color: '#f59e0b' }} /> : <Sun size={13} style={{ color: '#ea580c' }} />}
+          {theme === 'neofaro' || theme === 'forest' ? (
+            <Compass size={13} style={{ color: 'var(--faro-cyan-light)' }} />
+          ) : (
+            <Sun size={13} style={{ color: '#ea580c' }} />
+          )}
         </button>
 
         {/* Personalizar (Admin only) */}
