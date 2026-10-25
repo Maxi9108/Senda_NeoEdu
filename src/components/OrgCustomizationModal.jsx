@@ -138,7 +138,7 @@ export const OrgCustomizationModal = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 130,
+      zIndex: 10000,
       padding: '1rem'
     }}>
       <div className="glass-panel" style={{

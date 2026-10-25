@@ -1156,7 +1156,7 @@ export const SuperAdminPanel = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 100,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="glass-panel" style={{
@@ -1498,7 +1498,7 @@ export const SuperAdminPanel = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="glass-panel" style={{
@@ -1761,7 +1761,7 @@ export const SuperAdminPanel = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="glass-panel" style={{
@@ -2063,7 +2063,7 @@ export const SuperAdminPanel = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="glass-panel" style={{
@@ -2191,7 +2191,7 @@ export const SuperAdminPanel = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 10000,
           padding: '1rem'
         }}>
           <div className="glass-panel" style={{

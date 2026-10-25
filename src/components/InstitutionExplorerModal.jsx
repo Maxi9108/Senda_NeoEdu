@@ -199,7 +199,7 @@ export const InstitutionExplorerModal = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 100,
+      zIndex: 10000,
       padding: '1rem'
     }}>
       <div className="glass-panel" style={{

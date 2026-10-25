@@ -43,7 +43,7 @@ export const ShareModal = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 110,
+      zIndex: 10000,
       padding: '1rem'
     }}>
       <div className="glass-panel" style={{
