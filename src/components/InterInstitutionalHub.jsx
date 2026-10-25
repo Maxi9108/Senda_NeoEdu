@@ -142,20 +142,16 @@ export const InterInstitutionalHub = () => {
           <span>Tu rol actual: <strong>{currentUserRole}</strong></span>
         </div>
 
-        <button
-          onClick={() => setCurrentUserRole('admin')}
-          style={{
-            padding: '0.75rem 1.4rem',
-            background: 'var(--primary)',
-            color: '#fff',
-            borderRadius: 'var(--radius-md)',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-        >
-          Acceder como Responsable Institucional (Jefe de Grupo / Directivo)
-        </button>
+        <div style={{
+          padding: '0.65rem 1rem',
+          background: 'var(--bg-card)',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--border-color)',
+          fontSize: '0.84rem',
+          color: 'var(--text-muted)'
+        }}>
+          Para acceder a la Red Interinstitucional debes iniciar sesión con una cuenta autorizada de Responsable Institucional o Super Administrador.
+        </div>
       </div>
     );
   }

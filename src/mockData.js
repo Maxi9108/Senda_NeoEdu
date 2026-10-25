@@ -3,7 +3,7 @@ export const initialData = {
   superAdmin: {
     id: "superadmin-1",
     name: "Maximiliano Sánchez",
-    email: "maxi0802@gmai.com",
+    email: "maxi0802@gmail.com",
     role: "superadmin",
     roleLabel: "Super Administrador (Control Total de Plataforma)",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
@@ -492,6 +492,8 @@ export const initialData = {
       name: "Guillermo Navarro",
       email: "jefatura@scout142.org",
       phone: "+54 9 11 4589-2231",
+      birthDate: "1982-04-12",
+      age: 44,
       role: "admin",
       roleLabel: "Jefe de Grupo (Responsable Institucional)",
       branchId: "f-scout-jefatura",
@@ -506,6 +508,8 @@ export const initialData = {
       name: "Scouter Mariano Gómez",
       email: "unidad@scout142.org",
       phone: "+54 9 11 7789-4455",
+      birthDate: "1991-08-20",
+      age: 35,
       role: "educator",
       roleLabel: "Jefe de Unidad Scout (Educador)",
       branchId: "f-scout-unidad",
@@ -520,6 +524,8 @@ export const initialData = {
       name: "Akela Sofia Peralta",
       email: "manada@scout142.org",
       phone: "+54 9 11 6578-1122",
+      birthDate: "1995-11-03",
+      age: 31,
       role: "educator",
       roleLabel: "Jefa de Manada (Educadora)",
       branchId: "f-scout-manada",
@@ -534,6 +540,8 @@ export const initialData = {
       name: "Patricia Herrera",
       email: "patricia.herrera@email.com",
       phone: "+54 9 11 8844-3321",
+      birthDate: "1985-02-18",
+      age: 41,
       role: "parent",
       roleLabel: "Familia / Madre de Mateo (Unidad)",
       branchId: "f-scout-unidad",
@@ -548,6 +556,8 @@ export const initialData = {
       name: "Mateo Rinaldi",
       email: "mateo.scout@email.com",
       phone: "+54 9 11 1122-3344",
+      birthDate: "2013-06-15",
+      age: 13,
       role: "student",
       roleLabel: "Scout Protagonista (Patrulla Halcones)",
       branchId: "f-scout-unidad",
@@ -562,13 +572,22 @@ export const initialData = {
       name: "Esteban Quiroga",
       email: "esteban.q@test.com",
       phone: "+54 9 11 2233-9988",
+      birthDate: "1984-09-10",
+      age: 42,
       role: "parent",
       roleLabel: "Padre Solicitante",
       branchId: "f-scout-manada",
       status: "pending",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
       showPublicPhone: false,
-      showPublicEmail: false
+      showPublicEmail: false,
+      presentation: {
+        aboutMe: "Soy papá de Lucas Quiroga (7 años). Nos mudamos recientemente al barrio y buscamos un espacio con valores y actividades al aire libre para que haga amigos.",
+        wishes: "Deseo colaborar en la comisión de padres, ayudar en la logística de campamento y aprender sobre la mística scout junto a mi hijo.",
+        interests: "Carpintería básica, primeros auxilios, cocina de campaña.",
+        specialNotes: "Lucas es alérgico leve a las picaduras de abeja (lleva antihistamínico en la mochila).",
+        registeredAt: "24/10/2026"
+      }
     },
     {
       id: "mem-7",
@@ -576,13 +595,22 @@ export const initialData = {
       name: "Agustina Beltrán",
       email: "agustina.b@test.com",
       phone: "+54 9 11 3344-5566",
+      birthDate: "2011-03-22",
+      age: 15,
       role: "student",
       roleLabel: "Protagonista Aspirante",
       branchId: "f-scout-caminantes",
       status: "pending",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
       showPublicPhone: false,
-      showPublicEmail: false
+      showPublicEmail: false,
+      presentation: {
+        aboutMe: "Tengo 15 años y voy a 3er año. Me encanta la naturaleza, la fotografía y el senderismo. Quiero sumarme a la Comunidad Caminantes.",
+        wishes: "Deseo participar del campamento volante en Los Gigantes, aprender técnicas de orientación y proponer un proyecto de huerta comunitaria con el equipo.",
+        interests: "Trekking, edición de video para redes del grupo, cocina y astronomía.",
+        specialNotes: "Dieta vegetariana.",
+        registeredAt: "25/10/2026"
+      }
     }
   ],
 
@@ -602,6 +630,39 @@ export const initialData = {
       type: "Evento General de Grupo",
       location: "Predio Central Scout",
       notes: "Actividad unificada con todas las ramas (Lobatos, Unidad, Caminantes y Rover). Familias invitadas a las 17:30 hs.",
+      adultPrivateLink: "https://drive.google.com/drive/folders/1PlanificacionPrimavera2026_Adultos",
+      activities: [
+        {
+          id: "act-ev1-1",
+          day: "Sábado 31 de Octubre",
+          time: "14:15 - 15:30",
+          title: "Gran Juego Interramas: El Enigma de los Cuatro Vientos",
+          objective: "Fomentar la cooperación de patrullas mixtas resolviendo pistas con brújula y claves morse.",
+          responsible: "Scouter Mariano Gómez",
+          materials: "Banderines, silbato, tarjetas con pistas encriptadas, tiza",
+          adultGuideUrl: "https://docs.google.com/document/d/1GuiaJuegoCuatroVientos_FichaTecnica/edit"
+        },
+        {
+          id: "act-ev1-2",
+          day: "Sábado 31 de Octubre",
+          time: "15:45 - 17:00",
+          title: "Talleres Simultáneos de Pionerismo & Primeros Auxilios",
+          objective: "Construcción de trípodes de cocina y práctica de vendajes compresivos.",
+          responsible: "Akela Sofia Peralta & Guillermo Navarro",
+          materials: "Coligues de 2m, bobinas de hilo sisal, botiquín de demostración",
+          adultGuideUrl: "https://docs.google.com/document/d/1FichaTecnicaAmarresYVendajes2026/edit"
+        },
+        {
+          id: "act-ev1-3",
+          day: "Sábado 31 de Octubre",
+          time: "17:15 - 18:00",
+          title: "Fogón de Merienda y Cierre con Familias",
+          objective: "Compartir vivencias, canciones tradicionales y entrega de insignias de progresión.",
+          responsible: "Jefatura de Grupo",
+          materials: "Guitarra, cancionero scout, diplomas de bienvenida",
+          adultGuideUrl: ""
+        }
+      ],
       requiredMaterials: [
         { id: "req-1", name: "Uniforme Scout completo con pañuelo de grupo", checked: true },
         { id: "req-2", name: "Cantimplora con 1 litro de agua fresca", checked: true },
@@ -667,6 +728,39 @@ export const initialData = {
       type: "Campamento de Rama",
       location: "Sierras Chicas - Base Los Gigantes",
       notes: "Ascenso con mochilas de montaña y armado de vivac.",
+      adultPrivateLink: "https://drive.google.com/drive/folders/1CampamentoVolanteGigantes_AdultosPrivado",
+      activities: [
+        {
+          id: "act-cam-1",
+          day: "Día 1 - Sábado 21",
+          time: "08:30 - 12:00",
+          title: "Ascenso Técnico por Quebrada del Batán",
+          objective: "Caminata de aclimatación con mochila técnica y descansos pautados.",
+          responsible: "Guillermo Navarro",
+          materials: "Bastones de trekking, botiquín de montaña, radio VHF",
+          adultGuideUrl: "https://docs.google.com/document/d/1RutaAscensoQuebradaBatanProtocolo/edit"
+        },
+        {
+          id: "act-cam-2",
+          day: "Día 1 - Sábado 21",
+          time: "14:30 - 17:30",
+          title: "Armado de Vivac y Evaluación Meteorológica",
+          objective: "Instalación de refugios de emergencia con toldos impermeables.",
+          responsible: "Mariano Gómez",
+          materials: "Polietileno de 200 micrones, vientos de paracord, estacas de aluminio",
+          adultGuideUrl: "https://docs.google.com/document/d/1ManualVivacAltaMontana/edit"
+        },
+        {
+          id: "act-cam-3",
+          day: "Día 2 - Domingo 22",
+          time: "09:00 - 12:30",
+          title: "Práctica de Rescate y Primeros Auxilios en Terreno Agreste",
+          objective: "Inmovilización y camilla de circunstancias con cuerdas y varas.",
+          responsible: "Valeria Montero",
+          materials: "Férulas SAM, manta térmica aluminizada, vendajes elásticos",
+          adultGuideUrl: "https://docs.google.com/document/d/1SimulacroRescateMontanaEducadores/edit"
+        }
+      ],
       campLogistics: {
         startDate: "2026-11-21",
         endDate: "2026-11-22",

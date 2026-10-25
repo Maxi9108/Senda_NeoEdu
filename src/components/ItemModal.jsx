@@ -52,7 +52,8 @@ export const ItemModal = () => {
     location: 'Sede Principal',
     badgeColor: '#15803d',
     notes: '',
-    isGroupWide: true // Defaults to true so general events propagate!
+    isGroupWide: true, // Defaults to true so general events propagate!
+    adultPrivateLink: ''
   });
 
   const [blockForm, setBlockForm] = useState({
@@ -61,7 +62,8 @@ export const ItemModal = () => {
     objective: '',
     responsible: '',
     materials: '',
-    location: 'Patio Principal'
+    location: 'Patio Principal',
+    adultGuideUrl: ''
   });
 
   const [memberForm, setMemberForm] = useState({
@@ -373,6 +375,30 @@ export const ItemModal = () => {
               />
             </div>
 
+            <div style={{
+              background: 'rgba(2, 132, 199, 0.08)',
+              border: '1px dashed #0284c7',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                <Lock size={13} style={{ color: '#0284c7' }} />
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Enlace de Drive / Planillas (Exclusivo Adultos)
+                </label>
+              </div>
+              <input 
+                type="url"
+                placeholder="https://drive.google.com/drive/folders/... (Para cargar actividades)"
+                value={eventForm.adultPrivateLink || ''}
+                onChange={e => setEventForm({ ...eventForm, adultPrivateLink: e.target.value })}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                🔒 Solo visible para educadores, dirigentes y autoridades del grupo/escuela.
+              </span>
+            </div>
+
             <button
               type="submit"
               style={{
@@ -607,6 +633,30 @@ export const ItemModal = () => {
                 onChange={e => setBlockForm({ ...blockForm, materials: e.target.value })}
                 style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
               />
+            </div>
+
+            <div style={{
+              background: 'rgba(217, 119, 6, 0.08)',
+              border: '1px dashed #d97706',
+              borderRadius: 'var(--radius-sm)',
+              padding: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                <Lock size={13} style={{ color: '#d97706' }} />
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  Enlace a Ficha Técnica / Instructivo de Realización (Solo Adultos)
+                </label>
+              </div>
+              <input 
+                type="url"
+                placeholder="https://docs.google.com/... (Reglas pedagógicas, pasos, dinámica)"
+                value={blockForm.adultGuideUrl || ''}
+                onChange={e => setBlockForm({ ...blockForm, adultGuideUrl: e.target.value })}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                🔒 Solo visible para educadores, dirigentes y adultos responsables.
+              </span>
             </div>
 
             <button

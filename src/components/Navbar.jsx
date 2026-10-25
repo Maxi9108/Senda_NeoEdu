@@ -1,31 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Compass, 
   GraduationCap, 
-  FolderKanban, 
   Search, 
   Sun, 
   Moon, 
   Trees, 
   Type, 
   Download, 
-  PlusCircle,
-  FolderOpen,
+  FolderOpen, 
+  ShieldCheck, 
+  Users, 
+  Share2, 
+  Crown, 
+  LogOut, 
+  LogIn, 
+  Palette, 
+  Cloud, 
+  RefreshCw, 
+  Check, 
+  ExternalLink, 
+  Star, 
   UserCheck,
-  ShieldCheck,
-  Users,
-  Backpack,
-  Share2,
-  Crown,
-  LogOut,
-  LogIn,
-  Palette,
-  Star,
-  Cloud,
-  RefreshCw,
-  Check,
-  ExternalLink
+  Eye
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -33,6 +31,8 @@ export const Navbar = () => {
     data, 
     activeOrgId, 
     selectOrg, 
+    availableUserOrgs,
+    switchUserOrg,
     currentOrg, 
     activeFolderId, 
     setActiveFolderId,
@@ -45,16 +45,24 @@ export const Navbar = () => {
     setBackupModalOpen,
     setShareModalOpen,
     setOrgCustomizationModalOpen,
+    currentUser,
     currentUserRole,
-    setCurrentUserRole,
     isAdmin,
+    isSuperAdmin,
     isAdvancedAdmin,
     isLoggedIn,
-    setIsLoggedIn,
+    logout,
     driveSyncState,
     lastDriveSync,
-    syncWithDriveNow
+    syncWithDriveNow,
+    setProfileModalOpen,
+    previewRole,
+    setPreviewRole,
+    exitPreviewMode,
+    isRealAdult
   } = useApp();
+
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
 
   const handleFontSizeCycle = () => {
     if (fontSize === 'normal') setFontSize('large');
@@ -62,69 +70,173 @@ export const Navbar = () => {
     else setFontSize('normal');
   };
 
-  const getFontSizeLabel = () => {
-    if (fontSize === 'large') return 'Texto: Grande';
-    if (fontSize === 'extra-large') return 'Texto: Extra Grande';
-    return 'Texto: Normal';
+  const getRoleBadge = () => {
+    if (isSuperAdmin) {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '1px 6px',
+          borderRadius: 'var(--radius-full)',
+          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+          color: '#000',
+          fontSize: '0.7rem',
+          fontWeight: 800
+        }}>
+          <Crown size={11} />
+          <span>Admin</span>
+        </span>
+      );
+    }
+    if (isAdvancedAdmin) {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '1px 6px',
+          borderRadius: 'var(--radius-full)',
+          background: '#d97706',
+          color: '#fff',
+          fontSize: '0.7rem',
+          fontWeight: 700
+        }}>
+          <Star size={11} fill="#fff" />
+          <span>Avanzado</span>
+        </span>
+      );
+    }
+    if (isAdmin) {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '1px 6px',
+          borderRadius: 'var(--radius-full)',
+          background: 'var(--primary-light)',
+          color: 'var(--primary-text)',
+          fontSize: '0.7rem',
+          fontWeight: 700,
+          border: '1px solid rgba(21, 128, 61, 0.25)'
+        }}>
+          <ShieldCheck size={11} />
+          <span>Directivo</span>
+        </span>
+      );
+    }
+    if (currentUserRole === 'educator') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '1px 6px',
+          borderRadius: 'var(--radius-full)',
+          background: 'var(--primary-light)',
+          color: 'var(--primary-text)',
+          fontSize: '0.7rem',
+          fontWeight: 700
+        }}>
+          <Compass size={11} />
+          <span>Docente</span>
+        </span>
+      );
+    }
+    if (currentUserRole === 'parent') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.2rem',
+          padding: '1px 6px',
+          borderRadius: 'var(--radius-full)',
+          background: 'var(--secondary-light)',
+          color: 'var(--secondary)',
+          fontSize: '0.7rem',
+          fontWeight: 700
+        }}>
+          <Users size={11} />
+          <span>Familia</span>
+        </span>
+      );
+    }
+
+    return (
+      <span style={{
+        padding: '2px 8px',
+        borderRadius: 'var(--radius-full)',
+        background: 'var(--bg-input)',
+        color: 'var(--text-muted)',
+        fontSize: '0.72rem',
+        fontWeight: 600
+      }}>
+        Invitado
+      </span>
+    );
   };
 
   const activeFolder = currentOrg?.folders?.find(f => f.id === activeFolderId);
 
   return (
-    <header className="navbar-container" style={{
+    <header style={{
+      height: '56px',
+      maxHeight: '56px',
       background: 'var(--bg-surface)',
       borderBottom: '1px solid var(--border-color)',
-      padding: '0.75rem 1.5rem',
+      padding: '0 0.75rem',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: '1rem',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-      boxShadow: 'var(--shadow-sm)'
+      gap: '0.5rem',
+      flexWrap: 'nowrap',
+      width: '100%',
+      maxWidth: '100vw',
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      zIndex: 50,
+      flexShrink: 0
     }}>
       {/* Brand & Organization Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{
             background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
             color: '#fff',
-            width: '40px',
-            height: '40px',
+            width: '32px',
+            height: '32px',
             borderRadius: 'var(--radius-md)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-sm)',
+            flexShrink: 0
           }}>
-            {currentOrg?.type === 'scout' ? <Compass size={24} /> : <GraduationCap size={24} />}
+            {currentOrg?.type === 'scout' ? <Compass size={18} /> : <GraduationCap size={18} />}
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <div style={{ fontWeight: 800, fontSize: '0.98rem', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
               <span>Senda</span>
               <span style={{ color: 'var(--primary)' }}>NeoEdu</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-              Gestión Scout & Docente
             </div>
           </div>
         </div>
 
-        {/* Organization Dropdown */}
+        {/* Organization Selector */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           background: 'var(--bg-input)',
-          padding: '0.3rem 0.6rem',
+          padding: '0.2rem 0.35rem',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--border-color)',
-          gap: '0.5rem'
+          maxWidth: '150px',
+          gap: '0.25rem'
         }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Espacio:</span>
           <select 
             value={activeOrgId} 
-            onChange={(e) => selectOrg(e.target.value)}
+            onChange={(e) => (switchUserOrg ? switchUserOrg(e.target.value) : selectOrg(e.target.value))}
             style={{
               background: 'transparent',
               border: 'none',
@@ -132,10 +244,15 @@ export const Navbar = () => {
               color: 'var(--text-main)',
               cursor: 'pointer',
               outline: 'none',
-              fontSize: '0.88rem'
+              fontSize: '0.76rem',
+              maxWidth: '140px',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
             }}
+            title={availableUserOrgs?.length > 1 ? `Tienes acceso a ${availableUserOrgs.length} instituciones` : 'Institución activa'}
           >
-            {data.organizations.map(org => (
+            {(availableUserOrgs && availableUserOrgs.length > 0 ? availableUserOrgs : data.organizations).map(org => (
               <option key={org.id} value={org.id}>
                 {org.type === 'scout' ? '⚜️ ' : '🏫 '} {org.name}
               </option>
@@ -143,70 +260,28 @@ export const Navbar = () => {
           </select>
         </div>
 
-        {/* Active Role Selector (Perfil de Acceso) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          background: currentUserRole === 'superadmin' ? 'linear-gradient(135deg, #1e1b4b, #312e81)' : (currentUserRole === 'advanced_admin' ? 'linear-gradient(135deg, #451a03, #78350f)' : 'var(--primary-light)'),
-          padding: '0.3rem 0.65rem',
-          borderRadius: 'var(--radius-md)',
-          border: currentUserRole === 'superadmin' ? '1px solid #f59e0b' : (currentUserRole === 'advanced_admin' ? '1px solid #d97706' : '1px solid rgba(21, 128, 61, 0.25)'),
-          gap: '0.4rem'
-        }}>
-          {currentUserRole === 'superadmin' ? (
-            <Crown size={15} style={{ color: '#f59e0b' }} />
-          ) : currentUserRole === 'advanced_admin' ? (
-            <Star size={15} style={{ color: '#f59e0b' }} fill="#f59e0b" />
-          ) : (
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-text)' }}>Tu Rol:</span>
-          )}
-          <select
-            value={currentUserRole}
-            onChange={(e) => setCurrentUserRole(e.target.value)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              fontWeight: 700,
-              color: (currentUserRole === 'superadmin' || currentUserRole === 'advanced_admin') ? '#ffffff' : 'var(--primary-text)',
-              cursor: 'pointer',
-              outline: 'none',
-              fontSize: '0.86rem'
-            }}
-          >
-            <option value="superadmin" style={{ color: '#000' }}>👑 Super Admin (Maximiliano Sánchez - maxi0802@gmai.com)</option>
-            <option value="advanced_admin" style={{ color: '#000' }}>⭐ Administrador Avanzado (Nacional)</option>
-            <option value="admin" style={{ color: '#000' }}>🏛️ Responsable Institucional (Jefe de Grupo / Directivo)</option>
-            <option value="educator" style={{ color: '#000' }}>⚜️ Educador / Docente / Dirigente</option>
-            <option value="parent" style={{ color: '#000' }}>👨‍👩‍👧 Familia / Padres (Aceptado)</option>
-            <option value="student" style={{ color: '#000' }}>🎒 Protagonista / Alumno / Scout</option>
-          </select>
-        </div>
-
-        {/* Active Folder Pill */}
+        {/* Active Folder Tag */}
         {activeFolderId !== 'all' && activeFolder && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem',
+            gap: '0.3rem',
             background: 'var(--bg-input)',
             color: 'var(--text-main)',
-            padding: '0.25rem 0.65rem',
+            padding: '0.2rem 0.5rem',
             borderRadius: 'var(--radius-full)',
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
             fontWeight: 600,
-            border: '1px solid var(--border-color)'
+            border: '1px solid var(--border-color)',
+            maxWidth: '140px',
+            overflow: 'hidden'
           }}>
-            <FolderOpen size={14} style={{ color: activeFolder.color || 'var(--primary)' }} />
-            <span>{activeFolder.name}</span>
+            <FolderOpen size={12} style={{ color: activeFolder.color || 'var(--primary)', flexShrink: 0 }} />
+            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{activeFolder.name}</span>
             <button 
               onClick={() => setActiveFolderId('all')}
-              style={{
-                marginLeft: '0.25rem',
-                color: 'var(--text-muted)',
-                fontWeight: 700,
-                fontSize: '0.9rem'
-              }}
-              title="Quitar filtro de carpeta"
+              style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.85rem' }}
+              title="Quitar filtro"
             >
               ×
             </button>
@@ -217,250 +292,358 @@ export const Navbar = () => {
       {/* Global Search Bar */}
       <div style={{
         flex: 1,
-        maxWidth: '380px',
+        maxWidth: '170px',
+        minWidth: '50px',
         position: 'relative',
         display: 'flex',
         alignItems: 'center'
       }}>
-        <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+        <Search size={13} style={{ position: 'absolute', left: '8px', color: 'var(--text-muted)' }} />
         <input 
           type="text"
-          placeholder="Buscar proyectos, eventos, materiales o personas..."
+          placeholder="Buscar..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{
             width: '100%',
-            padding: '0.48rem 1rem 0.48rem 2.25rem',
+            padding: '0.3rem 1.4rem 0.3rem 1.6rem',
             borderRadius: 'var(--radius-full)',
             border: '1px solid var(--border-color)',
             background: 'var(--bg-input)',
             color: 'var(--text-main)',
-            fontSize: '0.86rem',
+            fontSize: '0.78rem',
             outline: 'none'
           }}
         />
         {searchQuery && (
           <button 
             onClick={() => setSearchQuery('')}
-            style={{ position: 'absolute', right: '10px', color: 'var(--text-muted)', fontSize: '0.9rem' }}
+            style={{ position: 'absolute', right: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}
           >
             ×
           </button>
         )}
       </div>
 
-      {/* Right Controls: Accessibility, Theme, Backup */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {/* Accessible Text Size Button */}
+      {/* Right Controls: Tools, Theme, User Session */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0, paddingRight: '0.25rem' }}>
+        {/* Adult Preview Role Toggle */}
+        {isRealAdult && (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setPreviewMenuOpen(!previewMenuOpen)}
+              title="Modo Vista Previa: Ver la aplicación como Alumno o Familia para comprobar que los accesos restringidos queden ocultos"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.22rem 0.5rem',
+                borderRadius: 'var(--radius-md)',
+                background: previewRole ? '#d97706' : 'var(--bg-input)',
+                border: `1px solid ${previewRole ? '#b45309' : 'var(--border-color)'}`,
+                color: previewRole ? '#ffffff' : 'var(--text-main)',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <Eye size={13} style={{ color: previewRole ? '#ffffff' : 'var(--secondary)' }} />
+              <span>
+                {previewRole ? (previewRole === 'parent' ? '👁️ Familia' : '👁️ Alumno') : 'Ver como...'}
+              </span>
+            </button>
+
+            {previewMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '6px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-lg)',
+                padding: '0.4rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.3rem',
+                width: '220px',
+                zIndex: 120
+              }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, padding: '2px 6px' }}>
+                  Simular vista de participante:
+                </div>
+                <button
+                  onClick={() => { setPreviewRole('parent'); setPreviewMenuOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: '4px',
+                    background: previewRole === 'parent' ? 'var(--primary-light)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>👨‍👩‍👧</span>
+                  <span>Ver como Familia / Padre</span>
+                </button>
+                <button
+                  onClick={() => { setPreviewRole('student'); setPreviewMenuOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: '4px',
+                    background: previewRole === 'student' ? 'var(--primary-light)' : 'transparent',
+                    color: 'var(--text-main)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>🎒</span>
+                  <span>Ver como Alumno / Protagonista</span>
+                </button>
+                {previewRole && (
+                  <button
+                    onClick={() => { exitPreviewMode(); setPreviewMenuOpen(false); }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: '4px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: '#dc2626',
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      borderTop: '1px solid var(--border-color)',
+                      marginTop: '2px'
+                    }}
+                  >
+                    <span>✕</span>
+                    <span>Salir y Volver al Modo Adulto</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Drive Sync Button */}
+        <button
+          onClick={syncWithDriveNow}
+          disabled={driveSyncState === 'syncing'}
+          title={`Sincronización Cloud con Drive / Google Sheets. ${lastDriveSync ? `Última: ${lastDriveSync}` : ''}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
+            borderRadius: 'var(--radius-md)',
+            background: driveSyncState === 'synced' ? '#dcfce7' : 'var(--bg-input)',
+            border: `1px solid ${driveSyncState === 'synced' ? '#16a34a' : 'var(--border-color)'}`,
+            color: driveSyncState === 'synced' ? '#166534' : 'var(--text-main)'
+          }}
+        >
+          {driveSyncState === 'syncing' ? (
+            <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite', color: '#0284c7' }} />
+          ) : driveSyncState === 'synced' ? (
+            <Check size={13} style={{ color: '#16a34a' }} />
+          ) : (
+            <Cloud size={13} style={{ color: '#0284c7' }} />
+          )}
+        </button>
+
+        {/* Font size button */}
         <button
           onClick={handleFontSizeCycle}
-          title="Ajustar tamaño de letra para lectura cómoda"
+          title={`Tamaño de texto (actual: ${fontSize})`}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.45rem 0.8rem',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-input)',
             border: '1px solid var(--border-color)',
-            color: 'var(--text-main)',
-            fontSize: '0.85rem',
-            fontWeight: 600
+            color: 'var(--text-main)'
           }}
         >
-          <Type size={16} style={{ color: 'var(--primary)' }} />
-          <span>{getFontSizeLabel()}</span>
+          <Type size={13} style={{ color: 'var(--primary)' }} />
         </button>
 
-        {/* Theme Switcher */}
-        <div style={{
-          display: 'flex',
-          background: 'var(--bg-input)',
-          padding: '0.2rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--border-color)'
-        }}>
-          <button
-            onClick={() => setTheme('forest')}
-            title="Tema Naturaleza / Scout"
-            style={{
-              padding: '0.35rem 0.5rem',
-              borderRadius: 'var(--radius-sm)',
-              background: theme === 'forest' ? 'var(--primary)' : 'transparent',
-              color: theme === 'forest' ? '#fff' : 'var(--text-muted)'
-            }}
-          >
-            <Trees size={16} />
-          </button>
-          <button
-            onClick={() => setTheme('light')}
-            title="Tema Claro"
-            style={{
-              padding: '0.35rem 0.5rem',
-              borderRadius: 'var(--radius-sm)',
-              background: theme === 'light' ? 'var(--primary)' : 'transparent',
-              color: theme === 'light' ? '#fff' : 'var(--text-muted)'
-            }}
-          >
-            <Sun size={16} />
-          </button>
-          <button
-            onClick={() => setTheme('dark')}
-            title="Tema Oscuro"
-            style={{
-              padding: '0.35rem 0.5rem',
-              borderRadius: 'var(--radius-sm)',
-              background: theme === 'dark' ? 'var(--primary)' : 'transparent',
-              color: theme === 'dark' ? '#fff' : 'var(--text-muted)'
-            }}
-          >
-            <Moon size={16} />
-          </button>
-        </div>
+        {/* Theme cycle */}
+        <button
+          onClick={() => {
+            if (theme === 'forest') setTheme('light');
+            else if (theme === 'light') setTheme('dark');
+            else setTheme('forest');
+          }}
+          title={`Cambiar tema visual (actual: ${theme})`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)'
+          }}
+        >
+          {theme === 'forest' ? <Trees size={13} style={{ color: '#15803d' }} /> : theme === 'dark' ? <Moon size={13} style={{ color: '#f59e0b' }} /> : <Sun size={13} style={{ color: '#ea580c' }} />}
+        </button>
 
-        {/* Customize Institution & Subgroup Button (Autoridades y Educadores) */}
+        {/* Personalizar (Admin only) */}
         {isAdmin && (
           <button
             onClick={() => setOrgCustomizationModalOpen(true)}
-            title="Personalizar colores, fondos y lema de la institución o subgrupos"
+            title="Personalizar colores y escudo"
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.45rem 0.85rem',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
               borderRadius: 'var(--radius-md)',
               background: 'var(--bg-input)',
               border: '1px solid var(--border-color)',
-              color: 'var(--text-main)',
-              fontSize: '0.85rem',
-              fontWeight: 700
+              color: 'var(--text-main)'
             }}
           >
-            <Palette size={15} style={{ color: 'var(--primary)' }} />
-            <span>Personalizar</span>
+            <Palette size={13} style={{ color: 'var(--primary)' }} />
           </button>
         )}
 
-        {/* Google Drive & Sheets 24/7 Cloud Sync Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-          <button
-            onClick={syncWithDriveNow}
-            disabled={driveSyncState === 'syncing'}
-            title={`Sincronización 24/7 con tu Google Sheets y Drive. ${lastDriveSync ? `Última sincronización: ${lastDriveSync}` : 'Listo para sincronizar.'}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.45rem 0.85rem',
-              borderRadius: 'var(--radius-md)',
-              background: driveSyncState === 'synced' ? '#dcfce7' : '#e0f2fe',
-              border: `1px solid ${driveSyncState === 'synced' ? '#16a34a' : '#0284c7'}`,
-              color: driveSyncState === 'synced' ? '#166534' : '#0369a1',
-              fontSize: '0.84rem',
-              fontWeight: 700,
-              cursor: driveSyncState === 'syncing' ? 'wait' : 'pointer'
-            }}
-          >
-            {driveSyncState === 'syncing' ? (
-              <>
-                <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                <span>Guardando en Sheets...</span>
-              </>
-            ) : driveSyncState === 'synced' ? (
-              <>
-                <Check size={14} style={{ color: '#16a34a' }} />
-                <span>Guardado en Drive</span>
-              </>
-            ) : (
-              <>
-                <Cloud size={14} style={{ color: '#0284c7' }} />
-                <span>Drive 24/7 {lastDriveSync ? `(${lastDriveSync})` : ''}</span>
-              </>
-            )}
-          </button>
-
-          <a
-            href="https://docs.google.com/spreadsheets/d/1MEVj2dJIQvTTFX6Z0BM2tMhrIZi4eWQnRIm-tzPQ0tg/edit"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Abrir tu Hoja de Cálculo en Google Sheets"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0.45rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--bg-input)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-muted)'
-            }}
-          >
-            <ExternalLink size={13} />
-          </a>
-        </div>
-
-        {/* Share Institution Button */}
+        {/* Share Button */}
         <button
           onClick={() => setShareModalOpen(true)}
-          title="Compartir enlace de la institución (con acceso restringido a no logueados)"
+          title="Compartir institución"
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.45rem 0.85rem',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--primary-light)',
-            border: '1px solid var(--primary)',
-            color: 'var(--primary-text)',
-            fontSize: '0.85rem',
-            fontWeight: 700
+            border: '1px solid rgba(21, 128, 61, 0.3)',
+            color: 'var(--primary-text)'
           }}
         >
-          <Share2 size={15} style={{ color: 'var(--primary)' }} />
-          <span>Compartir</span>
+          <Share2 size={13} />
         </button>
 
-        {/* Backup / Export Button */}
+        {/* Backup / Export */}
         <button
           onClick={() => setBackupModalOpen(true)}
-          title="Copia de seguridad y exportación JSON"
+          title="Exportar copia de seguridad JSON"
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.45rem 0.75rem',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
             borderRadius: 'var(--radius-md)',
             background: 'var(--bg-input)',
             border: '1px solid var(--border-color)',
-            color: 'var(--text-main)',
-            fontSize: '0.85rem',
-            fontWeight: 600
+            color: 'var(--text-main)'
           }}
         >
-          <Download size={15} />
-          <span>Datos</span>
+          <Download size={13} />
         </button>
 
-        {/* Login / Logout Simulator Button (To test restricted guest view) */}
-        <button
-          onClick={() => setIsLoggedIn(!isLoggedIn)}
-          title={isLoggedIn ? "Simular usuario no logueado (pantalla de bienvenida restringida)" : "Iniciar sesión"}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.45rem 0.75rem',
-            borderRadius: 'var(--radius-md)',
-            background: isLoggedIn ? 'var(--bg-input)' : 'var(--primary)',
-            border: `1px solid ${isLoggedIn ? 'var(--border-color)' : 'var(--primary)'}`,
-            color: isLoggedIn ? 'var(--text-muted)' : '#ffffff',
-            fontSize: '0.82rem',
-            fontWeight: 600
-          }}
-        >
-          {isLoggedIn ? <LogOut size={14} /> : <LogIn size={14} />}
-          <span>{isLoggedIn ? 'Cerrar Sesión' : 'Iniciar Sesión'}</span>
-        </button>
+        {/* Separator */}
+        <div style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 2px' }} />
+
+        {/* Authenticated User Status & Logout */}
+        {isLoggedIn && currentUser ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.15rem 0.45rem',
+                borderRadius: 'var(--radius-md)',
+                background: isSuperAdmin ? 'linear-gradient(135deg, #1e1b4b, #312e81)' : 'var(--bg-input)',
+                border: isSuperAdmin ? '1px solid #f59e0b' : '1px solid var(--border-color)',
+                color: isSuperAdmin ? '#fff' : 'var(--text-main)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }} 
+              title={`${currentUser.name} (${currentUser.role}) — Clic para ver Datos Personales o Cambiar Contraseña`}
+            >
+              {currentUser.avatar ? (
+                <img 
+                  src={currentUser.avatar} 
+                  alt={currentUser.name} 
+                  style={{ width: '20px', height: '20px', borderRadius: 'var(--radius-full)', objectFit: 'cover' }} 
+                />
+              ) : (
+                <UserCheck size={13} style={{ color: 'var(--primary)' }} />
+              )}
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, maxWidth: '65px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentUser.name?.split(' ')[0]}
+              </span>
+              {getRoleBadge()}
+            </button>
+
+            <button
+              onClick={logout}
+              title="Cerrar Sesión Segura"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                padding: '0.3rem 0.55rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#dc2626',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                flexShrink: 0,
+                cursor: 'pointer'
+              }}
+            >
+              <LogOut size={13} />
+              <span>Salir</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {}}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--primary)',
+              color: '#fff',
+              fontSize: '0.8rem',
+              fontWeight: 700
+            }}
+          >
+            <LogIn size={14} />
+            <span>Iniciar Sesión</span>
+          </button>
+        )}
       </div>
     </header>
   );

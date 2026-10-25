@@ -316,8 +316,9 @@ export const OrgChartView = () => {
         <div 
           className="glass-panel" 
           style={{
-            minHeight: '520px',
-            padding: '2.5rem 1.5rem',
+            minHeight: '340px',
+            maxHeight: 'calc(100vh - 210px)',
+            padding: '1.5rem 1rem',
             background: 'var(--bg-app)',
             borderRadius: 'var(--radius-lg)',
             overflowX: 'auto',

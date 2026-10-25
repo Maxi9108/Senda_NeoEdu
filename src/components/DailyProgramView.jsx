@@ -16,7 +16,10 @@ import {
   Trash2, 
   Edit3,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Lock,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 
 export const DailyProgramView = () => {
@@ -28,7 +31,8 @@ export const DailyProgramView = () => {
     updateDailyBlock, 
     deleteDailyBlock,
     updateProgramMeta,
-    setModalConfig
+    setModalConfig,
+    canEdit
   } = useApp();
 
   const [presentationMode, setPresentationMode] = useState(false);
@@ -432,6 +436,33 @@ export const DailyProgramView = () => {
                       <MapPin size={15} style={{ color: 'var(--accent-rose)' }} />
                       <span><strong>Rincón / Aula:</strong> {block.location}</span>
                     </div>
+
+                    {canEdit && block.adultGuideUrl && (
+                      <a
+                        href={block.adultGuideUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'rgba(217, 119, 6, 0.15)',
+                          border: '1px solid rgba(217, 119, 6, 0.35)',
+                          color: '#d97706',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          fontSize: '0.78rem'
+                        }}
+                        title="Ficha técnica de realización e instructivo pedagógico exclusivo para adultos"
+                      >
+                        <Lock size={12} />
+                        <FileText size={12} />
+                        <span>Ficha Técnica Adultos</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

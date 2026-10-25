@@ -23,7 +23,10 @@ import {
   Bus,
   Compass,
   CheckCircle2,
-  Users
+  Users,
+  FileText,
+  ExternalLink,
+  PlusCircle
 } from 'lucide-react';
 
 export const CalendarView = () => {
@@ -40,13 +43,382 @@ export const CalendarView = () => {
     currentUserRole,
     calendarBranchFilters,
     setCalendarBranchFilters,
-    togglePackingItem
+    togglePackingItem,
+    addActivityToEvent,
+    deleteActivityFromEvent
   } = useApp();
 
   const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 24)); // October 2026
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [selectedDayEvents, setSelectedDayEvents] = useState(null);
   const [activeCampModal, setActiveCampModal] = useState(null);
+  const [addingActivityEventId, setAddingActivityEventId] = useState(null);
+  const [newActivityForm, setNewActivityForm] = useState({
+    day: '',
+    time: '',
+    title: '',
+    objective: '',
+    responsible: '',
+    materials: '',
+    adultGuideUrl: ''
+  });
+
+  const handleAddActivity = (eventId) => {
+    if (!newActivityForm.title.trim()) return;
+    addActivityToEvent(eventId, {
+      ...newActivityForm,
+      day: newActivityForm.day || 'General',
+      time: newActivityForm.time || 'Horario a confirmar'
+    });
+    setNewActivityForm({
+      day: '',
+      time: '',
+      title: '',
+      objective: '',
+      responsible: '',
+      materials: '',
+      adultGuideUrl: ''
+    });
+    setAddingActivityEventId(null);
+  };
+
+  const renderEventActivitiesAndAdultLinks = (ev) => {
+    const isAdding = addingActivityEventId === ev.id;
+    const activities = ev.activities || [];
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.35rem' }}>
+        {/* ENLACE SOLO PARA ADULTOS (DRIVE PARA CARGAR ACTIVIDADES) */}
+        {canEdit && ev.adultPrivateLink && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.55rem 0.8rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(2, 132, 199, 0.08)',
+            border: '1px solid rgba(2, 132, 199, 0.35)',
+            gap: '0.5rem',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Lock size={13} style={{ color: '#0284c7' }} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0284c7' }}>
+                📁 Carpeta Drive de Actividades (Solo Adultos)
+              </span>
+            </div>
+            <a
+              href={ev.adultPrivateLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.25rem 0.6rem',
+                borderRadius: 'var(--radius-sm)',
+                background: '#0284c7',
+                color: '#fff',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                textDecoration: 'none'
+              }}
+            >
+              <span>Abrir Drive</span>
+              <ExternalLink size={11} />
+            </a>
+          </div>
+        )}
+
+        {/* ACTIVIDADES PROGRAMADAS DEL EVENTO */}
+        <div style={{
+          background: 'var(--bg-surface)',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--border-color)',
+          padding: '0.75rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: activities.length > 0 || isAdding ? '0.6rem' : '0',
+            flexWrap: 'wrap',
+            gap: '0.4rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Clock size={13} style={{ color: 'var(--primary)' }} />
+              <strong style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>
+                Actividades del Evento ({activities.length})
+              </strong>
+            </div>
+
+            {canEdit && (
+              <button
+                onClick={() => {
+                  if (isAdding) {
+                    setAddingActivityEventId(null);
+                  } else {
+                    setAddingActivityEventId(ev.id);
+                    setNewActivityForm({
+                      day: ev.date || 'Sábado',
+                      time: `${ev.startTime || '14:00'} a ${ev.endTime || '16:00'}`,
+                      title: '',
+                      objective: '',
+                      responsible: '',
+                      materials: '',
+                      adultGuideUrl: ''
+                    });
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  fontSize: '0.73rem',
+                  fontWeight: 700,
+                  color: isAdding ? 'var(--text-muted)' : 'var(--primary)',
+                  background: isAdding ? 'var(--bg-input)' : 'var(--primary-light)',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${isAdding ? 'var(--border-color)' : 'var(--primary-border)'}`,
+                  cursor: 'pointer'
+                }}
+              >
+                <Plus size={11} />
+                <span>{isAdding ? 'Cerrar' : '+ Agregar Actividad'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Formulario para agregar actividad interna al evento */}
+          {isAdding && (
+            <div style={{
+              background: 'var(--bg-input)',
+              padding: '0.75rem',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px dashed var(--primary)',
+              marginBottom: '0.75rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.55rem'
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)' }}>
+                ➕ Nueva Actividad en el Evento
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Día / Fecha *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Sábado 24, Día 1..."
+                    value={newActivityForm.day}
+                    onChange={e => setNewActivityForm({ ...newActivityForm, day: e.target.value })}
+                    style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Horario *</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 10:00 a 11:30 hs..."
+                    value={newActivityForm.time}
+                    onChange={e => setNewActivityForm({ ...newActivityForm, time: e.target.value })}
+                    style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Nombre de la Actividad *</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Gran Juego de Pistas, Taller de Robótica..."
+                  value={newActivityForm.title}
+                  onChange={e => setNewActivityForm({ ...newActivityForm, title: e.target.value })}
+                  style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Objetivo Pedagógico</label>
+                  <input
+                    type="text"
+                    placeholder="Trabajo en equipo, motricidad..."
+                    value={newActivityForm.objective}
+                    onChange={e => setNewActivityForm({ ...newActivityForm, objective: e.target.value })}
+                    style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Responsable</label>
+                  <input
+                    type="text"
+                    placeholder="Docente / Scouter a cargo..."
+                    value={newActivityForm.responsible}
+                    onChange={e => setNewActivityForm({ ...newActivityForm, responsible: e.target.value })}
+                    style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72rem', fontWeight: 600 }}>Materiales Necesarios</label>
+                <input
+                  type="text"
+                  placeholder="Mapas, brújulas, sogas, cartulinas..."
+                  value={newActivityForm.materials}
+                  onChange={e => setNewActivityForm({ ...newActivityForm, materials: e.target.value })}
+                  style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                />
+              </div>
+
+              {/* Ficha técnica instructiva sólo para adultos */}
+              <div style={{
+                background: 'rgba(217, 119, 6, 0.08)',
+                border: '1px dashed #d97706',
+                borderRadius: '4px',
+                padding: '0.45rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.2rem' }}>
+                  <Lock size={11} style={{ color: '#d97706' }} />
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#d97706' }}>
+                    Enlace de Ficha Técnica / Instructivo (Solo Adultos)
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  placeholder="https://docs.google.com/... (Instrucciones, dinámicas o consideraciones pedagógicas)"
+                  value={newActivityForm.adultGuideUrl}
+                  onChange={e => setNewActivityForm({ ...newActivityForm, adultGuideUrl: e.target.value })}
+                  style={{ width: '100%', padding: '0.35rem', fontSize: '0.76rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'flex-end', marginTop: '0.2rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setAddingActivityEventId(null)}
+                  style={{ padding: '0.3rem 0.65rem', fontSize: '0.74rem', borderRadius: '4px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddActivity(ev.id)}
+                  style={{ padding: '0.3rem 0.75rem', fontSize: '0.74rem', borderRadius: '4px', background: 'var(--primary)', color: '#fff', fontWeight: 700 }}
+                >
+                  Guardar Actividad
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de Actividades de este evento */}
+          {activities.length === 0 && !isAdding ? (
+            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              No hay actividades desglosadas para este evento aún.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {activities.map(act => (
+                <div
+                  key={act.id}
+                  style={{
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        background: 'var(--primary-light)',
+                        color: 'var(--primary-text)',
+                        padding: '1px 5px',
+                        borderRadius: '4px'
+                      }}>
+                        📅 {act.day}
+                      </span>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        background: 'var(--secondary-light)',
+                        color: 'var(--secondary)',
+                        padding: '1px 5px',
+                        borderRadius: '4px'
+                      }}>
+                        ⏰ {act.time}
+                      </span>
+                      <strong style={{ fontSize: '0.82rem', color: 'var(--text-main)' }}>
+                        {act.title}
+                      </strong>
+                    </div>
+
+                    {canEdit && (
+                      <button
+                        onClick={() => deleteActivityFromEvent(ev.id, act.id)}
+                        title="Eliminar actividad"
+                        style={{ color: 'var(--text-muted)', cursor: 'pointer', padding: '1px' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+
+                  {act.objective && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                      <strong>Objetivo:</strong> {act.objective}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {act.responsible && (
+                      <span><strong>Resp:</strong> {act.responsible}</span>
+                    )}
+                    {act.materials && (
+                      <span><strong>Materiales:</strong> {act.materials}</span>
+                    )}
+
+                    {/* Ficha técnica sólo visible para adultos */}
+                    {canEdit && act.adultGuideUrl && (
+                      <a
+                        href={act.adultGuideUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: 'rgba(217, 119, 6, 0.15)',
+                          border: '1px solid rgba(217, 119, 6, 0.4)',
+                          color: '#d97706',
+                          fontWeight: 700,
+                          fontSize: '0.7rem',
+                          textDecoration: 'none'
+                        }}
+                        title="Ficha instructiva pedagógica visible exclusivamente para adultos"
+                      >
+                        <Lock size={10} />
+                        <FileText size={10} />
+                        <span>Ficha Técnica Adultos</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -712,6 +1084,9 @@ export const CalendarView = () => {
                             </div>
                           </div>
                         )}
+
+                        {/* Actividades del Evento y Enlaces Adultos */}
+                        {renderEventActivitiesAndAdultLinks(ev)}
                       </div>
                     );
                   })}
@@ -864,6 +1239,9 @@ export const CalendarView = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Actividades del Evento y Enlaces Adultos */}
+                {renderEventActivitiesAndAdultLinks(ev)}
               </div>
             );
           })}

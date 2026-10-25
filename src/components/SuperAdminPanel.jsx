@@ -7,6 +7,7 @@ import {
   CheckCircle2, 
   XCircle, 
   UserCheck, 
+  UserX,
   PlusCircle, 
   Compass, 
   GraduationCap, 
@@ -20,7 +21,16 @@ import {
   Sparkles,
   ArrowRight,
   Star,
-  Award
+  Award,
+  Trash2,
+  Edit3,
+  Lock,
+  Unlock,
+  Send,
+  MessageSquare,
+  Eye,
+  X,
+  Search
 } from 'lucide-react';
 
 export const SuperAdminPanel = () => {
@@ -29,6 +39,7 @@ export const SuperAdminPanel = () => {
     approveInstitutionBySuperAdmin, 
     rejectInstitutionBySuperAdmin, 
     promoteToInstitutionAdmin,
+    assignAuthorityToOrg,
     requestInstitutionCreation,
     selectOrg,
     activeOrgId,
@@ -37,11 +48,62 @@ export const SuperAdminPanel = () => {
     isAdvancedAdmin,
     canManageAdvancedAdmins,
     promoteToAdvancedAdmin,
-    demoteAdvancedAdmin
+    demoteAdvancedAdmin,
+    updateOrganization,
+    toggleOrganizationBlock,
+    deleteOrganization,
+    sendInstitutionBroadcast,
+    updateMemberRole,
+    updateMemberBranch,
+    toggleMemberStatus,
+    deleteMember
   } = useApp();
 
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [selectedOrgFilter, setSelectedOrgFilter] = useState(activeOrgId);
+
+  // Super Admin Organization Management Modals & State
+  const [editingOrg, setEditingOrg] = useState(null);
+  const [editOrgForm, setEditOrgForm] = useState({
+    name: '',
+    type: 'scout',
+    cue: '',
+    address: '',
+    city: '',
+    province: '',
+    officialEmail: '',
+    officialPhone: '',
+    description: '',
+    color: '#15803d'
+  });
+
+  const [inspectingOrgMembers, setInspectingOrgMembers] = useState(null);
+  const [inspectingOrgRoleFilter, setInspectingOrgRoleFilter] = useState('all');
+  const [inspectingOrgQuery, setInspectingOrgQuery] = useState('');
+
+  const [broadcastOrg, setBroadcastOrg] = useState(null);
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+
+  const [adminFeedback, setAdminFeedback] = useState(null);
+
+  // Assign Authority Modal State
+  const [assigningAuthorityOrg, setAssigningAuthorityOrg] = useState(null);
+  const [candidateMemberId, setCandidateMemberId] = useState('');
+  const [candidateRoleLabel, setCandidateRoleLabel] = useState('Responsable Directivo Designado');
+
+  const handleAssignAuthority = (e) => {
+    e.preventDefault();
+    if (!assigningAuthorityOrg || !candidateMemberId) return;
+
+    assignAuthorityToOrg(assigningAuthorityOrg.id, candidateMemberId, candidateRoleLabel);
+    setAdminFeedback({
+      type: 'success',
+      text: `✅ Autoridad directiva asignada con éxito a "${assigningAuthorityOrg.name}". La institución queda regularizada.`
+    });
+    setAssigningAuthorityOrg(null);
+    setTimeout(() => setAdminFeedback(null), 3500);
+  };
 
   // Form state for creating a new institution request
   const [instName, setInstName] = useState('');
@@ -95,6 +157,77 @@ export const SuperAdminPanel = () => {
     setIsRequestModalOpen(false);
   };
 
+  const handleOpenEditOrg = (org) => {
+    setEditingOrg(org);
+    setEditOrgForm({
+      name: org.name || '',
+      type: org.type || 'scout',
+      cue: org.cue || '',
+      address: org.address || '',
+      city: org.city || '',
+      province: org.province || '',
+      officialEmail: org.officialEmail || '',
+      officialPhone: org.officialPhone || '',
+      description: org.description || '',
+      color: org.color || '#15803d'
+    });
+  };
+
+  const handleSaveEditOrg = (e) => {
+    e.preventDefault();
+    if (!editingOrg) return;
+    updateOrganization(editingOrg.id, editOrgForm);
+    setAdminFeedback({
+      type: 'success',
+      text: `✅ Institución "${editOrgForm.name}" actualizada con éxito.`
+    });
+    setEditingOrg(null);
+    setTimeout(() => setAdminFeedback(null), 3500);
+  };
+
+  const handleToggleBlockOrg = (org) => {
+    const willBlock = !org.isBlocked;
+    if (confirm(willBlock ? `¿Bloquear el acceso operativo a "${org.name}"? Los usuarios de esta institución no podrán iniciar sesión hasta que sea desbloqueada.` : `¿Desbloquear y restablecer el acceso a "${org.name}"?`)) {
+      toggleOrganizationBlock(org.id);
+      setAdminFeedback({
+        type: willBlock ? 'info' : 'success',
+        text: willBlock ? `🔒 "${org.name}" ha sido bloqueada.` : `🔓 "${org.name}" ha sido desbloqueada y restaurada.`
+      });
+      setTimeout(() => setAdminFeedback(null), 3500);
+    }
+  };
+
+  const handleDeleteOrg = (org) => {
+    if (data.organizations.length <= 1) {
+      alert('No se puede eliminar la única institución registrada en la plataforma.');
+      return;
+    }
+    if (confirm(`⚠️ ATENCIÓN: ¿Eliminar definitivamente la institución "${org.name}" y todos sus miembros asociados? Esta acción no se puede deshacer.`)) {
+      const res = deleteOrganization(org.id);
+      if (res?.success) {
+        setAdminFeedback({
+          type: 'info',
+          text: `🗑️ Institución "${org.name}" eliminada de la plataforma.`
+        });
+        setTimeout(() => setAdminFeedback(null), 3500);
+      }
+    }
+  };
+
+  const handleSendBroadcast = (e) => {
+    e.preventDefault();
+    if (!broadcastOrg || !broadcastTitle.trim() || !broadcastMessage.trim()) return;
+    sendInstitutionBroadcast(broadcastOrg.id, broadcastTitle.trim(), broadcastMessage.trim());
+    setAdminFeedback({
+      type: 'success',
+      text: `📢 Comunicado oficial enviado a todos los integrantes de "${broadcastOrg.name}".`
+    });
+    setBroadcastOrg(null);
+    setBroadcastTitle('');
+    setBroadcastMessage('');
+    setTimeout(() => setAdminFeedback(null), 4000);
+  };
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* Super Admin Identity Banner */}
@@ -145,7 +278,7 @@ export const SuperAdminPanel = () => {
             <h1 style={{ fontSize: '1.75rem', color: '#ffffff', margin: 0 }}>Maximiliano Sánchez</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e0e7ff', fontSize: '0.88rem', marginTop: '0.2rem' }}>
               <Mail size={14} />
-              <span>maxi0802@gmai.com</span>
+              <span>maxi0802@gmail.com</span>
               <span style={{ margin: '0 4px' }}>•</span>
               <ShieldCheck size={14} style={{ color: '#4ade80' }} />
               <span>Autoridad máxima para habilitación de jerarquías e instituciones</span>
@@ -171,6 +304,369 @@ export const SuperAdminPanel = () => {
           <PlusCircle size={18} style={{ color: '#d97706' }} />
           <span>Registrar Solicitud Institucional</span>
         </button>
+      </div>
+
+      {/* FEEDBACK NOTICE BANNER */}
+      {adminFeedback && (
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md)',
+          background: adminFeedback.type === 'success' ? 'var(--primary-light)' : 'var(--bg-input)',
+          border: '1.5px solid var(--primary)',
+          color: 'var(--text-main)',
+          fontSize: '0.9rem',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          <span>{adminFeedback.text}</span>
+        </div>
+      )}
+
+      {/* SECTION: REGISTERED INSTITUTIONS DIRECTORY & COMPLETE ADMINISTRATIVE CONTROL */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+              <span className="badge badge-purple" style={{ fontSize: '0.75rem', fontWeight: 800 }}>
+                <Building2 size={13} />
+                Control Nacional Centralizado
+              </span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {data.organizations.length} instituciones / grupos en base de datos
+              </span>
+            </div>
+            <h2 style={{ fontSize: '1.4rem', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              Directorio de Instituciones y Control Total
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: '0.2rem 0 0' }}>
+              Facultad exclusiva del Super Administrador: modificar datos, bloquear/desbloquear, ver y reasignar autoridades/adultos/miembros, comunicar avisos y dar de baja.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.25rem' }}>
+          {data.organizations.map(org => {
+            const orgMembers = data.members.filter(m => m.orgId === org.id);
+            const countAdmins = orgMembers.filter(m => m.role === 'admin' || m.role === 'advanced_admin').length;
+            const countEducators = orgMembers.filter(m => m.role === 'educator').length;
+            const countParents = orgMembers.filter(m => m.role === 'parent').length;
+            const countStudents = orgMembers.filter(m => m.role === 'student').length;
+            const isBlocked = !!org.isBlocked;
+
+            return (
+              <div
+                key={org.id}
+                className="glass-panel"
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  background: isBlocked ? 'var(--accent-rose-light)' : 'var(--bg-surface)',
+                  border: isBlocked ? '2px solid var(--accent-rose)' : '1px solid var(--border-color)',
+                  padding: '1.4rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <div>
+                  {/* Top Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: 'var(--radius-md)',
+                        background: org.color || 'var(--primary)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {org.type === 'scout' ? <Compass size={22} /> : <GraduationCap size={22} />}
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', margin: '0 0 2px' }}>
+                          {org.name}
+                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span className={`badge ${org.type === 'scout' ? 'badge-scout' : 'badge-edu'}`} style={{ fontSize: '0.7rem' }}>
+                            {org.type === 'scout' ? '⚜️ Grupo Scout' : '🏫 Colegio / Escuela'}
+                          </span>
+                          {org.cue && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              CUE: {org.cue}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status & Authority Pills */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
+                      {isBlocked ? (
+                        <span className="badge badge-rose" style={{ fontWeight: 800, fontSize: '0.74rem' }}>
+                          <Lock size={12} />
+                          BLOQUEADA
+                        </span>
+                      ) : (
+                        <span className="badge badge-scout" style={{ fontWeight: 700, fontSize: '0.74rem' }}>
+                          <CheckCircle2 size={12} />
+                          ACTIVA
+                        </span>
+                      )}
+
+                      {countAdmins === 0 && (
+                        <span className="badge badge-warning" style={{ fontWeight: 800, fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', color: '#b91c1c', border: '1px solid #ef4444' }}>
+                          <AlertCircle size={11} />
+                          SIN AUTORIDAD
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info details */}
+                  <div style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem',
+                    background: 'var(--bg-input)',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    marginBottom: '0.75rem'
+                  }}>
+                    {(org.address || org.city || org.province) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <MapPin size={13} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                        <span>{[org.address, org.city, org.province].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {(org.officialEmail || org.officialPhone) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        {org.officialEmail && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Mail size={12} /> {org.officialEmail}
+                          </span>
+                        )}
+                        {org.officialPhone && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <Phone size={12} /> {org.officialPhone}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {org.description && (
+                      <div style={{ fontStyle: 'italic', color: 'var(--text-main)', marginTop: '2px', fontSize: '0.78rem' }}>
+                        "{org.description}"
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Member Composition Tags */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gap: '0.4rem',
+                    textAlign: 'center',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <div style={{ background: 'var(--bg-input)', padding: '0.35rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>🏛️ Directivos</div>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{countAdmins}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', padding: '0.35rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>⚜️ Adultos</div>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{countEducators}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', padding: '0.35rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>👨‍👩‍👧 Familias</div>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{countParents}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', padding: '0.35rem', borderRadius: 'var(--radius-sm)' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>🎒 Alumnos</div>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{countStudents}</div>
+                    </div>
+                  </div>
+
+                  {/* Alerta de Falta de Autoridad Directiva */}
+                  {countAdmins === 0 && (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '1.5px solid #ef4444',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.6rem 0.85rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      marginBottom: '0.6rem'
+                    }}>
+                      <div style={{ fontSize: '0.78rem', color: '#b91c1c', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                        <span>Sin autoridad directiva supervisora asignada.</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setAssigningAuthorityOrg(org);
+                          const educators = orgMembers.filter(m => m.role === 'educator');
+                          setCandidateMemberId(educators[0]?.id || orgMembers[0]?.id || '');
+                        }}
+                        style={{
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.76rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        🏛️ Designar Autoridad
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* SUPER ADMIN ACTION BUTTONS BAR */}
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid var(--border-color)'
+                }}>
+                  {/* Modificar */}
+                  <button
+                    onClick={() => handleOpenEditOrg(org)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title="Modificar datos oficiales, sede y contacto"
+                  >
+                    <Edit3 size={13} style={{ color: 'var(--primary)' }} />
+                    <span>Modificar</span>
+                  </button>
+
+                  {/* Ver Todos los Miembros & Modificar */}
+                  <button
+                    onClick={() => {
+                      setInspectingOrgMembers(org);
+                      setInspectingOrgRoleFilter('all');
+                      setInspectingOrgQuery('');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--primary-light)',
+                      border: '1px solid var(--primary)',
+                      color: 'var(--primary-text)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title="Ver autoridades, adultos, alumnos y familias para modificarlos"
+                  >
+                    <Users size={13} />
+                    <span>Ver Miembros ({orgMembers.length})</span>
+                  </button>
+
+                  {/* Comunicarse */}
+                  <button
+                    onClick={() => {
+                      setBroadcastOrg(org);
+                      setBroadcastTitle('');
+                      setBroadcastMessage('');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid #f59e0b',
+                      color: '#b45309',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title="Enviar comunicado oficial a todos los integrantes de esta institución"
+                  >
+                    <Send size={13} />
+                    <span>Comunicar</span>
+                  </button>
+
+                  {/* Bloquear / Desbloquear */}
+                  <button
+                    onClick={() => handleToggleBlockOrg(org)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: isBlocked ? 'var(--primary)' : 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      color: isBlocked ? '#fff' : 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title={isBlocked ? "Desbloquear institución" : "Bloquear institución temporalmente"}
+                  >
+                    {isBlocked ? <Unlock size={13} /> : <Lock size={13} />}
+                    <span>{isBlocked ? 'Desbloquear' : 'Bloquear'}</span>
+                  </button>
+
+                  {/* Eliminar Institución */}
+                  <button
+                    onClick={() => handleDeleteOrg(org)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.65rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--accent-rose-light)',
+                      border: 'none',
+                      color: 'var(--accent-rose)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      marginLeft: 'auto'
+                    }}
+                    title="Eliminar institución de la plataforma"
+                  >
+                    <Trash2 size={13} />
+                    <span>Eliminar</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* SECTION 1: PENDING INSTITUTIONS APPROVAL QUEUE */}
@@ -412,7 +908,7 @@ export const SuperAdminPanel = () => {
               <strong>Permisos Concedidos:</strong> Tienen facultades operativas casi idénticas a Maximiliano Sánchez: aprobar solicitudes de nuevas instituciones, auditar organizaciones, promover directivos y acceder a la Red Interinstitucional completa.
             </li>
             <li>
-              <strong style={{ color: '#b91c1c' }}>Restricción Inviolable 1:</strong> <strong>NO pueden borrar ni modificar al Super Administrador Maximiliano Sánchez (`maxi0802@gmai.com`)</strong> bajo ninguna circunstancia.
+              <strong style={{ color: '#b91c1c' }}>Restricción Inviolable 1:</strong> <strong>NO pueden borrar ni modificar al Super Administrador Maximiliano Sánchez (`maxi0802@gmail.com`)</strong> bajo ninguna circunstancia.
             </li>
             <li>
               <strong style={{ color: '#b91c1c' }}>Restricción Inviolable 2:</strong> <strong>NO pueden otorgar ni nombrar a nadie como Administrador Avanzado</strong>. Esta jerarquía solo puede ser concedida directamente por Maximiliano Sánchez.
@@ -985,6 +1481,852 @@ export const SuperAdminPanel = () => {
                   }}
                 >
                   Enviar a Revisión de Maximiliano Sánchez
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: EDIT ORGANIZATION DETAILS */}
+      {editingOrg && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            maxWidth: '580px',
+            width: '100%',
+            padding: '1.75rem',
+            boxShadow: 'var(--shadow-xl)',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Edit3 size={20} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
+                  Modificar Datos de la Institución
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingOrg(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditOrg} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                  Nombre Oficial de la Institución *
+                </label>
+                <input
+                  type="text"
+                  value={editOrgForm.name}
+                  onChange={e => setEditOrgForm({ ...editOrgForm, name: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Tipo de Institución
+                  </label>
+                  <select
+                    value={editOrgForm.type}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, type: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  >
+                    <option value="scout">⚜️ Grupo Scout / Guía</option>
+                    <option value="school">🏫 Institución Educativa</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    CUE / Registro Oficial
+                  </label>
+                  <input
+                    type="text"
+                    value={editOrgForm.cue}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, cue: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Dirección / Sede
+                  </label>
+                  <input
+                    type="text"
+                    value={editOrgForm.address}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, address: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Ciudad
+                  </label>
+                  <input
+                    type="text"
+                    value={editOrgForm.city}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, city: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Provincia
+                  </label>
+                  <input
+                    type="text"
+                    value={editOrgForm.province}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, province: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Email Oficial
+                  </label>
+                  <input
+                    type="email"
+                    value={editOrgForm.officialEmail}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, officialEmail: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                    Teléfono Oficial
+                  </label>
+                  <input
+                    type="tel"
+                    value={editOrgForm.officialPhone}
+                    onChange={e => setEditOrgForm({ ...editOrgForm, officialPhone: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                  Breve Reseña o Descripción
+                </label>
+                <textarea
+                  rows={2}
+                  value={editOrgForm.description}
+                  onChange={e => setEditOrgForm({ ...editOrgForm, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.86rem',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingOrg(null)}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                    fontSize: '0.86rem'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '0.55rem 1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '0.86rem'
+                  }}
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: INSPECT AND MODIFY ALL MEMBERS OF AN INSTITUTION */}
+      {inspectingOrgMembers && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            maxWidth: '860px',
+            width: '100%',
+            padding: '1.75rem',
+            boxShadow: 'var(--shadow-xl)',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Users size={22} style={{ color: 'var(--primary)' }} />
+                  <h3 style={{ fontSize: '1.35rem', color: 'var(--text-main)', margin: 0 }}>
+                    Miembros Registrados en: {inspectingOrgMembers.name}
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: '0.25rem 0 0' }}>
+                  Audita a cada integrante (autoridades, adultos, familias y alumnos). Puedes cambiar su rol, asignar su subgrupo, bloquear o eliminar su acceso.
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectingOrgMembers(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'all', label: 'Todos' },
+                  { id: 'admin', label: '🏛️ Autoridades' },
+                  { id: 'educator', label: '⚜️ Educadores' },
+                  { id: 'parent', label: '👨‍👩‍👧 Familias' },
+                  { id: 'student', label: '🎒 Protagonistas' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setInspectingOrgRoleFilter(tab.id)}
+                    style={{
+                      padding: '0.35rem 0.7rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      background: inspectingOrgRoleFilter === tab.id ? 'var(--primary)' : 'var(--bg-input)',
+                      color: inspectingOrgRoleFilter === tab.id ? '#fff' : 'var(--text-muted)',
+                      border: '1px solid var(--border-color)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ position: 'relative', width: '240px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar integrante..."
+                  value={inspectingOrgQuery}
+                  onChange={e => setInspectingOrgQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.45rem 0.65rem 0.45rem 2rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.82rem'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Member Cards List */}
+            {(() => {
+              const membersInOrg = data.members.filter(m => m.orgId === inspectingOrgMembers.id);
+              const filtered = membersInOrg.filter(m => {
+                if (inspectingOrgRoleFilter !== 'all' && m.role !== inspectingOrgRoleFilter) return false;
+                if (inspectingOrgQuery) {
+                  const q = inspectingOrgQuery.toLowerCase();
+                  return m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q);
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                    No se encontraron miembros en esta categoría.
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '55vh', overflowY: 'auto' }}>
+                  {filtered.map(member => {
+                    const isBlocked = member.status === 'blocked';
+                    return (
+                      <div
+                        key={member.id}
+                        style={{
+                          padding: '0.85rem 1rem',
+                          borderRadius: 'var(--radius-md)',
+                          background: isBlocked ? 'var(--accent-rose-light)' : 'var(--bg-input)',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '0.75rem'
+                        }}
+                      >
+                        {/* Member Identity */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '220px' }}>
+                          <img
+                            src={member.avatar}
+                            alt={member.name}
+                            style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '2px solid var(--primary)' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.92rem' }}>
+                              {member.name}
+                            </div>
+                            <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                              {member.email} {member.phone ? `• ${member.phone}` : ''}
+                            </div>
+                            {member.birthDate && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600 }}>
+                                🎂 {member.birthDate} ({member.age !== undefined && member.age !== null ? `${member.age} años` : ''})
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Direct Controls: Role Selector & Subgroup Selector */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {/* Role changer */}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              Categoría / Rol:
+                            </label>
+                            <select
+                              value={member.role}
+                              onChange={(e) => {
+                                updateMemberRole(member.id, e.target.value);
+                                setAdminFeedback({
+                                  type: 'success',
+                                  text: `✅ Rol de ${member.name} actualizado a ${e.target.value}.`
+                                });
+                                setTimeout(() => setAdminFeedback(null), 3000);
+                              }}
+                              style={{
+                                padding: '0.35rem 0.55rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--border-color)',
+                                background: 'var(--bg-surface)',
+                                fontSize: '0.78rem',
+                                color: 'var(--text-main)',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <option value="admin">🏛️ Autoridad / Directivo</option>
+                              <option value="educator">⚜️ Educador / Adulto</option>
+                              <option value="parent">👨‍👩‍👧 Familia / Padre</option>
+                              <option value="student">🎒 Protagonista / Alumno</option>
+                            </select>
+                          </div>
+
+                          {/* Branch / Subgroup changer */}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              Subgrupo / Rama:
+                            </label>
+                            <select
+                              value={member.branchId || inspectingOrgMembers?.folders?.[0]?.id || ''}
+                              onChange={(e) => {
+                                updateMemberBranch(member.id, e.target.value);
+                                setAdminFeedback({
+                                  type: 'success',
+                                  text: `✅ ${member.name} reasignado/a de subgrupo.`
+                                });
+                                setTimeout(() => setAdminFeedback(null), 3000);
+                              }}
+                              style={{
+                                padding: '0.35rem 0.55rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1.5px solid var(--secondary)',
+                                background: 'var(--bg-surface)',
+                                fontSize: '0.78rem',
+                                color: 'var(--text-main)',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {(inspectingOrgMembers?.folders || []).map(f => (
+                                <option key={f.id} value={f.id}>
+                                  {f.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Block/Unblock toggle */}
+                          <button
+                            onClick={() => {
+                              toggleMemberStatus(member.id);
+                              setAdminFeedback({
+                                type: 'info',
+                                text: `Estado de acceso modificado para ${member.name}.`
+                              });
+                              setTimeout(() => setAdminFeedback(null), 3000);
+                            }}
+                            style={{
+                              padding: '0.4rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: isBlocked ? 'var(--primary-light)' : 'var(--bg-surface)',
+                              border: '1px solid var(--border-color)',
+                              color: isBlocked ? 'var(--primary-text)' : 'var(--text-muted)',
+                              cursor: 'pointer'
+                            }}
+                            title={isBlocked ? "Desbloquear miembro" : "Bloquear acceso"}
+                          >
+                            {isBlocked ? <UserCheck size={16} /> : <UserX size={16} />}
+                          </button>
+
+                          {/* Delete member */}
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar definitivamente a ${member.name} de ${inspectingOrgMembers.name}?`)) {
+                                deleteMember(member.id);
+                                setAdminFeedback({
+                                  type: 'info',
+                                  text: `Integrante ${member.name} eliminado.`
+                                });
+                                setTimeout(() => setAdminFeedback(null), 3000);
+                              }
+                            }}
+                            style={{
+                              padding: '0.4rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--accent-rose-light)',
+                              border: 'none',
+                              color: 'var(--accent-rose)',
+                              cursor: 'pointer'
+                            }}
+                            title="Eliminar miembro de la institución"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+              <button
+                onClick={() => setInspectingOrgMembers(null)}
+                style={{
+                  padding: '0.55rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--primary)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  fontSize: '0.86rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Cerrar Panel de Miembros
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: BROADCAST COMMUNICATION TO AN INSTITUTION */}
+      {broadcastOrg && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '1.75rem',
+            boxShadow: 'var(--shadow-xl)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Send size={20} style={{ color: '#d97706' }} />
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
+                  Comunicado Oficial a: {broadcastOrg.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setBroadcastOrg(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+              Este mensaje será emitido con la firma del Super Administrador Maximiliano Sánchez y llegará a las autoridades, educadores, familias y protagonistas de esta institución.
+            </p>
+
+            <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.3rem' }}>
+                  Título del Comunicado *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Auditoría Nacional Aprobada / Aviso de Documentación Pendiente"
+                  value={broadcastTitle}
+                  onChange={e => setBroadcastTitle(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.3rem' }}>
+                  Contenido del Mensaje Oficial *
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Escribe el mensaje o directiva oficial para la institución..."
+                  value={broadcastMessage}
+                  onChange={e => setBroadcastMessage(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.86rem',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setBroadcastOrg(null)}
+                  style={{
+                    padding: '0.6rem 1.15rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                    fontSize: '0.86rem'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.6rem 1.35rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '0.86rem',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <Send size={15} />
+                  <span>Transmitir Notificación</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: DESIGNATE AUTHORITY TO AN INSTITUTION */}
+      {assigningAuthorityOrg && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="glass-panel" style={{
+            background: 'var(--bg-surface)',
+            borderRadius: 'var(--radius-lg)',
+            maxWidth: '560px',
+            width: '100%',
+            padding: '1.75rem',
+            boxShadow: 'var(--shadow-xl)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={22} style={{ color: '#d97706' }} />
+                <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', margin: 0 }}>
+                  Designar Autoridad Supervisora: {assigningAuthorityOrg.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setAssigningAuthorityOrg(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+              Esta institución fue registrada o iniciada sin una autoridad directiva oficial. Como Super Administrador o Administrador General, puedes designar a un educador de la sede o autoridad regional para que ejerza la supervisión directiva y regularice su estado.
+            </p>
+
+            <form onSubmit={handleAssignAuthority} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>
+                  Seleccionar Integrante o Educador para Designar como Autoridad *
+                </label>
+                {data.members.filter(m => m.orgId === assigningAuthorityOrg.id).length === 0 ? (
+                  <div style={{ padding: '0.65rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    No hay miembros registrados aún en esta institución.
+                  </div>
+                ) : (
+                  <select
+                    value={candidateMemberId}
+                    onChange={(e) => setCandidateMemberId(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1.5px solid var(--primary)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-main)',
+                      fontSize: '0.88rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {data.members.filter(m => m.orgId === assigningAuthorityOrg.id).map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.roleLabel || m.role}) — {m.email}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>
+                  Cargo / Título Oficial de la Autoridad
+                </label>
+                <input
+                  type="text"
+                  value={candidateRoleLabel}
+                  onChange={(e) => setCandidateRoleLabel(e.target.value)}
+                  placeholder="Ej: Jefe de Grupo Directivo / Director Pedagógico / Supervisor Distrital"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem'
+                  }}
+                />
+              </div>
+
+              <div style={{
+                background: 'var(--primary-light)',
+                border: '1px solid var(--primary)',
+                padding: '0.65rem 0.85rem',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.78rem',
+                color: 'var(--primary-text)',
+                lineHeight: 1.35
+              }}>
+                ✅ Al confirmar, el usuario seleccionado adquirirá permisos de nivel <strong>Directivo / Administrador</strong> para gestionar perfiles, autorizar integrantes y coordinar actividades en esta institución.
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setAssigningAuthorityOrg(null)}
+                  style={{
+                    padding: '0.6rem 1.15rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                    fontSize: '0.86rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!candidateMemberId}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.6rem 1.35rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '0.86rem',
+                    boxShadow: 'var(--shadow-sm)',
+                    cursor: candidateMemberId ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  <ShieldCheck size={16} />
+                  <span>Confirmar Designación de Autoridad</span>
                 </button>
               </div>
             </form>

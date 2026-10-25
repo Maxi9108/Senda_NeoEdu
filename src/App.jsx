@@ -18,10 +18,11 @@ import { BackupModal } from './components/BackupModal';
 import { ShareModal } from './components/ShareModal';
 import { AuthGate } from './components/AuthGate';
 import { ItemModal } from './components/ItemModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { Lock } from 'lucide-react';
 
 const PrivateAccessModal = () => {
-  const { privateAccessModal, setPrivateAccessModal, setCurrentUserRole } = useApp();
+  const { privateAccessModal, setPrivateAccessModal } = useApp();
   if (!privateAccessModal.isOpen) return null;
 
   return (
@@ -71,11 +72,11 @@ const PrivateAccessModal = () => {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            Debes iniciar sesión con una cuenta autorizada de Educador, Dirigente o Responsable Institucional para ver este material.
+          </p>
           <button
-            onClick={() => {
-              setCurrentUserRole('educator');
-              setPrivateAccessModal({ isOpen: false, folderName: '' });
-            }}
+            onClick={() => setPrivateAccessModal({ isOpen: false, folderName: '' })}
             style={{
               padding: '0.65rem 1rem',
               background: 'var(--primary)',
@@ -85,20 +86,7 @@ const PrivateAccessModal = () => {
               fontSize: '0.88rem'
             }}
           >
-            Acceder con Credencial de Educador
-          </button>
-
-          <button
-            onClick={() => setPrivateAccessModal({ isOpen: false, folderName: '' })}
-            style={{
-              padding: '0.55rem',
-              background: 'var(--bg-input)',
-              color: 'var(--text-muted)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.84rem'
-            }}
-          >
-            Volver a la vista pública
+            Entendido, volver a la vista general
           </button>
         </div>
       </div>
@@ -107,33 +95,170 @@ const PrivateAccessModal = () => {
 };
 
 const MainLayout = () => {
-  const { currentTab, isLoggedIn } = useApp();
+  const { 
+    currentTab, 
+    setCurrentTab,
+    currentOrg,
+    isLoggedIn, 
+    previewRole, 
+    setPreviewRole, 
+    exitPreviewMode,
+    orgHasAuthority,
+    isSuperAdmin,
+    isAdvancedAdmin
+  } = useApp();
 
-  // If not logged in, show protected AuthGate landing restriction
+  // If not logged in, show protected AuthGate landing restriction fitting in single page
   if (!isLoggedIn) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100vw',
+        maxHeight: '100vh',
+        maxWidth: '100vw',
+        overflow: 'hidden'
+      }}>
         <Navbar />
-        <AuthGate />
+        <div style={{ flex: 1, height: 'calc(100vh - 56px)', overflowY: 'auto' }}>
+          <AuthGate />
+        </div>
         <ShareModal />
       </div>
     );
   }
 
+  const lacksAuthority = currentOrg && orgHasAuthority && !orgHasAuthority(currentOrg.id);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      width: '100vw',
+      maxHeight: '100vh',
+      maxWidth: '100vw',
+      overflow: 'hidden'
+    }}>
       <Navbar />
+
+      {/* Missing Authority Supervision Banner */}
+      {lacksAuthority && (
+        <div style={{
+          background: 'linear-gradient(90deg, #991b1b, #dc2626)',
+          color: '#ffffff',
+          padding: '0.45rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          zIndex: 40,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          flexShrink: 0,
+          flexWrap: 'wrap',
+          gap: '0.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <span>⚠️ ATENCIÓN INSTITUCIONAL:</span>
+            <span style={{ fontWeight: 500, fontSize: '0.78rem' }}>
+              Esta institución ({currentOrg.name}) no cuenta con una autoridad directiva supervisora activa. Se notificó al Super Administrador y Administradores Generales para evaluar su continuidad y designar autoridad.
+            </span>
+          </div>
+
+          {(isSuperAdmin || isAdvancedAdmin) && (
+            <button
+              onClick={() => setCurrentTab('superadmin')}
+              style={{
+                background: '#ffffff',
+                color: '#991b1b',
+                border: 'none',
+                padding: '3px 10px',
+                borderRadius: '4px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              🏛️ Designar Autoridad en Panel
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Adult Preview Simulation Banner */}
+      {previewRole && (
+        <div style={{
+          background: 'linear-gradient(90deg, #b45309, #d97706)',
+          color: '#ffffff',
+          padding: '0.4rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          zIndex: 40,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span>👁️ MODO VISTA PREVIA ACTIVO:</span>
+            <span style={{ background: 'rgba(0, 0, 0, 0.25)', padding: '2px 8px', borderRadius: '4px' }}>
+              Visualizando como {previewRole === 'parent' ? '👨‍👩‍👧 Familia / Padre' : '🎒 Alumno / Protagonista'}
+            </span>
+            <span style={{ fontWeight: 500, fontSize: '0.76rem', opacity: 0.9 }}>
+              (Los enlaces Drive y fichas técnicas privadas para adultos están ocultos para verificar privacidad)
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={() => setPreviewRole(previewRole === 'parent' ? 'student' : 'parent')}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                color: '#ffffff',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Cambiar a {previewRole === 'parent' ? '🎒 Alumno' : '👨‍👩‍👧 Familia'}
+            </button>
+
+            <button
+              onClick={exitPreviewMode}
+              style={{
+                background: '#ffffff',
+                color: '#b45309',
+                border: 'none',
+                padding: '2px 9px',
+                borderRadius: '4px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              ✕ Volver al Modo Adulto
+            </button>
+          </div>
+        </div>
+      )}
       
-      <div style={{ display: 'flex', flex: 1 }}>
+      <div style={{ display: 'flex', flex: 1, height: previewRole ? 'calc(100vh - 56px - 34px)' : 'calc(100vh - 56px)', overflow: 'hidden' }}>
         <Sidebar />
         
         <main style={{
           flex: 1,
-          padding: '1.75rem 2rem',
+          padding: '1.25rem 1.75rem',
           maxWidth: '1440px',
           width: '100%',
           margin: '0 auto',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          minWidth: 0
         }}>
           {currentTab === 'folders' && <FoldersView />}
           {currentTab === 'inter_org' && <InterInstitutionalHub />}
@@ -152,6 +277,7 @@ const MainLayout = () => {
       <BackupModal />
       <ShareModal />
       <ItemModal />
+      <UserProfileModal />
       <OrgCustomizationModal />
       <PrivateAccessModal />
     </div>

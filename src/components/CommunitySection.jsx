@@ -1115,21 +1115,9 @@ export const CommunitySection = () => {
                 Tu rol de navegación actual: <strong>{currentUserRole === 'student' ? '🎒 Protagonista / Alumno' : currentUserRole}</strong>.
               </div>
 
-              <button
-                onClick={() => setCurrentUserRole('educator')}
-                style={{
-                  marginTop: '0.5rem',
-                  padding: '0.65rem 1.25rem',
-                  background: 'var(--primary)',
-                  color: '#fff',
-                  borderRadius: 'var(--radius-md)',
-                  fontWeight: 700,
-                  fontSize: '0.88rem',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-              >
-                Cambiar a Perfil de Educador / Dirigente
-              </button>
+                <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Inicia sesión con una cuenta de Educador o Directivo para acceder a las carpetas privadas y documentos reservados.
+                </p>
             </div>
           ) : (
             /* AUTHORIZED ADULT VIEW: DRIVE FOLDERS, WEBSITES, PRIVATE DOCS */
