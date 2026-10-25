@@ -303,6 +303,7 @@ export const AppProvider = ({ children }) => {
   const [privateAccessModal, setPrivateAccessModal] = useState({ isOpen: false, folderName: '' });
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [institutionExplorerOpen, setInstitutionExplorerOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Load from Google Sheets on startup if available
   useEffect(() => {
@@ -547,36 +548,35 @@ export const AppProvider = ({ children }) => {
       ...prev,
       pendingInstitutions: [newReq, ...(prev.pendingInstitutions || [])]
     }));
-    return { success: true, reqId: newReq.id };
+    return { success: true, reqId: newReq.id, request: newReq };
   };
 
-  const approveInstitutionBySuperAdmin = (reqId) => {
-    const req = (data.pendingInstitutions || []).find(r => r.id === reqId);
-    if (!req) return;
-
+  // Direct Creation and Immediate Activation of an Institution / Group
+  const createAndActivateInstitution = (orgData) => {
+    const orgId = `org-${Date.now()}`;
     const newOrg = {
-      id: `org-${Date.now()}`,
-      name: req.name,
-      type: req.type || 'scout',
-      badge: req.badge || (req.type === 'scout' ? 'Grupo Scout Habilitado' : 'Institución Habilitada'),
-      description: req.description || 'Institución comprometida con la formación comunitaria.',
-      color: req.type === 'scout' ? '#15803d' : '#0284c7',
-      icon: req.type === 'scout' ? 'Compass' : 'GraduationCap',
-      cue: req.cue || '',
-      country: req.country || 'Argentina',
-      province: req.province || '',
-      department: req.department || req.partido || '',
-      city: req.city || req.localidad || '',
-      address: req.address || '',
-      officialEmail: req.officialEmail || '',
-      officialPhone: req.officialPhone || '',
+      id: orgId,
+      name: orgData.name,
+      type: orgData.type || 'scout',
+      badge: orgData.badge || (orgData.type === 'scout' ? 'Grupo Scout Habilitado' : 'Institución Habilitada'),
+      description: orgData.description || 'Institución comprometida con la formación comunitaria.',
+      color: orgData.color || (orgData.type === 'scout' ? '#15803d' : '#0284c7'),
+      icon: orgData.type === 'scout' ? 'Compass' : 'GraduationCap',
+      cue: orgData.cue || '',
+      country: orgData.country || 'Argentina',
+      province: orgData.province || '',
+      department: orgData.department || orgData.partido || '',
+      city: orgData.city || orgData.localidad || '',
+      address: orgData.address || '',
+      officialEmail: orgData.officialEmail || '',
+      officialPhone: orgData.officialPhone || '',
       status: 'approved',
       folders: [
         {
           id: `f-${Date.now()}-all`,
           name: 'General / Todo el Grupo',
           ageRange: 'Todas las edades',
-          color: req.type === 'scout' ? '#15803d' : '#0284c7',
+          color: orgData.type === 'scout' ? '#15803d' : '#0284c7',
           bannerBg: 'linear-gradient(135deg, #15803d25, #ffffff)',
           whatsappLink: '',
           isPrivateAdultOnly: false,
@@ -586,7 +586,7 @@ export const AppProvider = ({ children }) => {
         },
         {
           id: `f-${Date.now()}-dirigentes`,
-          name: req.type === 'scout' ? '🎖️ Consejo de Grupo & Dirigentes' : '🏛️ Equipo Directivo',
+          name: orgData.type === 'scout' ? '🎖️ Consejo de Grupo & Dirigentes' : '🏛️ Equipo Directivo',
           ageRange: 'Adultos Educadores',
           color: '#7c3aed',
           bannerBg: 'linear-gradient(135deg, #7c3aed25, #ffffff)',
@@ -599,25 +599,25 @@ export const AppProvider = ({ children }) => {
       ]
     };
 
-    // If the adult applicant explicitly requested that the Super Admin appoint the authority,
-    // they are registered as an Educator, leaving the institution with an Authority Alert for supervision!
-    const applicantRole = req.needsAuthorityAssignment ? 'educator' : 'admin';
-    const applicantRoleLabel = req.needsAuthorityAssignment 
-      ? `${req.applicantRole || 'Educador Adulto Solicitante'} (Requiere Designación de Autoridad)`
-      : `${req.applicantRole || 'Responsable Habilitado'}`;
+    const applicantRole = orgData.needsAuthorityAssignment ? 'educator' : 'admin';
+    const applicantRoleLabel = orgData.needsAuthorityAssignment 
+      ? `${orgData.applicantRole || 'Educador Adulto Solicitante'} (Requiere Designación de Autoridad)`
+      : `${orgData.applicantRole || (orgData.type === 'scout' ? 'Jefe de Grupo' : 'Responsable Habilitado')}`;
+
+    const memberEmail = (orgData.applicantEmail || currentUser?.email || orgData.officialEmail || 'responsable@institucion.org').toLowerCase().trim();
 
     const newApplicantMember = {
       id: `mem-${Date.now()}`,
       orgId: newOrg.id,
-      name: req.applicantName,
-      email: req.officialEmail || req.applicantEmail || 'responsable@institucion.org',
-      phone: req.applicantPhone,
-      dni: req.applicantDni || '',
+      name: orgData.applicantName || currentUser?.name || 'Responsable Institucional',
+      email: memberEmail,
+      phone: orgData.applicantPhone || currentUser?.phone || '',
+      dni: orgData.applicantDni || '',
       role: applicantRole,
       roleLabel: applicantRoleLabel,
       branchId: newOrg.folders[1].id,
       status: 'active',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
       showPublicPhone: true,
       showPublicEmail: true
     };
@@ -626,10 +626,141 @@ export const AppProvider = ({ children }) => {
       ...prev,
       organizations: [...prev.organizations, newOrg],
       members: [...prev.members, newApplicantMember],
-      pendingInstitutions: (prev.pendingInstitutions || []).filter(r => r.id !== reqId)
+      pendingInstitutions: (prev.pendingInstitutions || []).filter(r => r.name !== newOrg.name)
     }));
 
+    // Update currentUser multi-institution access
+    if (currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        orgId: newOrg.id,
+        orgIds: Array.from(new Set([...(currentUser.orgIds || []), newOrg.id])),
+        role: (currentUser.role === 'parent' || currentUser.role === 'guest') ? applicantRole : currentUser.role,
+        roleLabel: (currentUser.role === 'parent' || currentUser.role === 'guest') ? applicantRoleLabel : currentUser.roleLabel
+      };
+      setCurrentUser(updatedUser);
+      if (currentUser.role === 'parent' || currentUser.role === 'guest') {
+        setCurrentUserRole(applicantRole);
+      }
+      try {
+        localStorage.setItem('senda_current_user', JSON.stringify(updatedUser));
+      } catch (e) {}
+    }
+
     setActiveOrgId(newOrg.id);
+    setActiveFolderId('all');
+
+    return { success: true, reqId: orgId, org: newOrg, member: newApplicantMember };
+  };
+
+  const addOrganization = (orgData, autoApprove = true) => {
+    if (autoApprove || isSuperAdmin) {
+      return createAndActivateInstitution(orgData);
+    }
+    return requestInstitutionCreation(orgData);
+  };
+
+  const approveInstitutionBySuperAdmin = (reqId, optionalReq = null) => {
+    let approvedOrgId = null;
+
+    setData(prev => {
+      const req = optionalReq || (prev.pendingInstitutions || []).find(r => r.id === reqId);
+      if (!req) return prev;
+
+      approvedOrgId = `org-${Date.now()}`;
+      const newOrg = {
+        id: approvedOrgId,
+        name: req.name,
+        type: req.type || 'scout',
+        badge: req.badge || (req.type === 'scout' ? 'Grupo Scout Habilitado' : 'Institución Habilitada'),
+        description: req.description || 'Institución comprometida con la formación comunitaria.',
+        color: req.type === 'scout' ? '#15803d' : '#0284c7',
+        icon: req.type === 'scout' ? 'Compass' : 'GraduationCap',
+        cue: req.cue || '',
+        country: req.country || 'Argentina',
+        province: req.province || '',
+        department: req.department || req.partido || '',
+        city: req.city || req.localidad || '',
+        address: req.address || '',
+        officialEmail: req.officialEmail || '',
+        officialPhone: req.officialPhone || '',
+        status: 'approved',
+        folders: [
+          {
+            id: `f-${Date.now()}-all`,
+            name: 'General / Todo el Grupo',
+            ageRange: 'Todas las edades',
+            color: req.type === 'scout' ? '#15803d' : '#0284c7',
+            bannerBg: 'linear-gradient(135deg, #15803d25, #ffffff)',
+            whatsappLink: '',
+            isPrivateAdultOnly: false,
+            reminderNotice: '¡Bienvenidos al nuevo espacio habilitado!',
+            materials: [],
+            gallery: []
+          },
+          {
+            id: `f-${Date.now()}-dirigentes`,
+            name: req.type === 'scout' ? '🎖️ Consejo de Grupo & Dirigentes' : '🏛️ Equipo Directivo',
+            ageRange: 'Adultos Educadores',
+            color: '#7c3aed',
+            bannerBg: 'linear-gradient(135deg, #7c3aed25, #ffffff)',
+            whatsappLink: '',
+            isPrivateAdultOnly: true,
+            reminderNotice: 'Espacio de gestión institucional reservado.',
+            materials: [],
+            gallery: []
+          }
+        ]
+      };
+
+      const applicantRole = req.needsAuthorityAssignment ? 'educator' : 'admin';
+      const applicantRoleLabel = req.needsAuthorityAssignment 
+        ? `${req.applicantRole || 'Educador Adulto Solicitante'} (Requiere Designación de Autoridad)`
+        : `${req.applicantRole || (req.type === 'scout' ? 'Jefe de Grupo' : 'Responsable Habilitado')}`;
+
+      const memberEmail = (req.applicantEmail || currentUser?.email || req.officialEmail || 'responsable@institucion.org').toLowerCase().trim();
+
+      const newApplicantMember = {
+        id: `mem-${Date.now()}`,
+        orgId: newOrg.id,
+        name: req.applicantName || 'Responsable Institucional',
+        email: memberEmail,
+        phone: req.applicantPhone || '',
+        dni: req.applicantDni || '',
+        role: applicantRole,
+        roleLabel: applicantRoleLabel,
+        branchId: newOrg.folders[1].id,
+        status: 'active',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+        showPublicPhone: true,
+        showPublicEmail: true
+      };
+
+      return {
+        ...prev,
+        organizations: [...prev.organizations, newOrg],
+        members: [...prev.members, newApplicantMember],
+        pendingInstitutions: (prev.pendingInstitutions || []).filter(r => r.id !== reqId)
+      };
+    });
+
+    if (approvedOrgId) {
+      setActiveOrgId(approvedOrgId);
+      setActiveFolderId('all');
+
+      // If current user is the applicant, update their current session
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          orgId: approvedOrgId,
+          orgIds: Array.from(new Set([...(currentUser.orgIds || []), approvedOrgId]))
+        };
+        setCurrentUser(updatedUser);
+        try {
+          localStorage.setItem('senda_current_user', JSON.stringify(updatedUser));
+        } catch (e) {}
+      }
+    }
   };
 
   const rejectInstitutionBySuperAdmin = (reqId) => {
@@ -1459,14 +1590,18 @@ export const AppProvider = ({ children }) => {
     }));
   };
 
-  const addFolder = (orgId, folderName, isPrivate = false) => {
-    if (!folderName.trim()) return;
+  const addFolder = (orgId, folderName, isPrivate = false, color = null, ageRange = 'Personalizado') => {
+    if (!folderName.trim()) return null;
+    const targetOrgId = orgId || activeOrgId;
+    const targetOrg = data.organizations.find(o => o.id === targetOrgId);
+    const defaultColor = color || (targetOrg?.type === 'scout' ? '#15803d' : '#0284c7');
+
     const newFolder = {
       id: `f-${Date.now()}`,
       name: folderName.trim(),
-      color: '#15803d',
-      ageRange: 'Personalizado',
-      bannerBg: 'linear-gradient(135deg, #15803d25, #ffffff)',
+      color: defaultColor,
+      ageRange: ageRange || 'Personalizado',
+      bannerBg: `linear-gradient(135deg, ${defaultColor}25, #ffffff)`,
       whatsappLink: '',
       isPrivateAdultOnly: isPrivate,
       reminderNotice: '¡Bienvenidos a esta nueva sección! Recuerden revisar las actividades programadas.',
@@ -1476,7 +1611,7 @@ export const AppProvider = ({ children }) => {
     setData(prev => ({
       ...prev,
       organizations: prev.organizations.map(org => {
-        if (org.id === orgId) {
+        if (org.id === targetOrgId) {
           return {
             ...org,
             folders: [...(org.folders || []), newFolder]
@@ -1485,6 +1620,65 @@ export const AppProvider = ({ children }) => {
         return org;
       })
     }));
+
+    setCalendarBranchFilters(prev => ({
+      ...prev,
+      [newFolder.id]: true
+    }));
+
+    return newFolder;
+  };
+
+  // Direct Member Creation & Affiliation to Institution
+  const addMember = (memberData) => {
+    const memberOrgId = memberData.orgId || activeOrgId;
+    const targetOrg = data.organizations.find(o => o.id === memberOrgId);
+    const defaultBranchId = memberData.branchId || targetOrg?.folders?.[0]?.id || '';
+    
+    const roleLabels = {
+      admin: 'Autoridad / Directivo',
+      educator: 'Educador / Docente',
+      parent: 'Familia / Padre / Madre',
+      student: 'Protagonista / Alumno / Scout'
+    };
+
+    const newMember = {
+      id: `mem-${Date.now()}`,
+      orgId: memberOrgId,
+      name: memberData.name.trim(),
+      email: memberData.email?.trim() || '',
+      phone: memberData.phone?.trim() || '',
+      dni: memberData.dni?.trim() || '',
+      role: memberData.role || 'student',
+      roleLabel: memberData.roleLabel || roleLabels[memberData.role] || memberData.role,
+      branchId: defaultBranchId,
+      branchIds: memberData.branchIds || (defaultBranchId ? [defaultBranchId] : []),
+      status: 'active',
+      avatar: memberData.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(memberData.name || Date.now())}`,
+      showPublicPhone: !!memberData.showPublicPhone,
+      showPublicEmail: !!memberData.showPublicEmail,
+      bio: memberData.bio || 'Nuevo integrante incorporado a la institución.'
+    };
+
+    setData(prev => ({
+      ...prev,
+      members: [...prev.members, newMember],
+      organigram: [
+        ...prev.organigram,
+        {
+          id: `node-${Date.now()}`,
+          orgId: memberOrgId,
+          name: newMember.name,
+          role: newMember.roleLabel,
+          email: newMember.email,
+          phone: newMember.phone,
+          parentId: memberData.parentId || null,
+          avatar: newMember.avatar
+        }
+      ]
+    }));
+
+    return newMember;
   };
 
   // Projects CRUD
@@ -1849,6 +2043,8 @@ export const AppProvider = ({ children }) => {
         promoteToAdvancedAdmin,
         demoteAdvancedAdmin,
         // Super Admin & Institution Workflow
+        addOrganization,
+        createAndActivateInstitution,
         requestInstitutionCreation,
         approveInstitutionBySuperAdmin,
         rejectInstitutionBySuperAdmin,
@@ -1900,6 +2096,8 @@ export const AppProvider = ({ children }) => {
         setSearchQuery,
         modalConfig,
         setModalConfig,
+        mobileMenuOpen,
+        setMobileMenuOpen,
         backupModalOpen,
         setBackupModalOpen,
         profileModalOpen,
@@ -1929,6 +2127,7 @@ export const AppProvider = ({ children }) => {
         updateMemberRole,
         updateMemberBranch,
         deleteMember,
+        addMember,
         sendMessage,
         addFolder,
         addProject,

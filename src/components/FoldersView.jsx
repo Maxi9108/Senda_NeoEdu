@@ -77,26 +77,28 @@ export const FoldersView = () => {
           </p>
         </div>
 
-        {canEdit && (
+        {(canEdit || isAdult) && (
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setModalConfig({ isOpen: true, type: 'new_folder' })}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.65rem 1.15rem',
-                background: 'var(--primary)',
-                color: '#fff',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-            >
-              <FolderPlus size={18} />
-              <span>Crear Rama / Grado</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setModalConfig({ isOpen: true, type: 'new_folder' })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 1.15rem',
+                  background: 'var(--primary)',
+                  color: '#fff',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <FolderPlus size={18} />
+                <span>Crear Rama / Grado</span>
+              </button>
+            )}
 
             <button
               onClick={() => setModalConfig({ isOpen: true, type: 'new_org' })}
@@ -138,7 +140,7 @@ export const FoldersView = () => {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
           gap: '1.25rem'
         }}>
           {currentOrg.folders?.map(folder => {

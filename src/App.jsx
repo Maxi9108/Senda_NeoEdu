@@ -20,6 +20,7 @@ import { AuthGate } from './components/AuthGate';
 import { ItemModal } from './components/ItemModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { InstitutionExplorerModal } from './components/InstitutionExplorerModal';
+import { BottomNav } from './components/BottomNav';
 import { Lock } from 'lucide-react';
 
 const PrivateAccessModal = () => {
@@ -109,7 +110,9 @@ const MainLayout = () => {
     exitPreviewMode,
     orgHasAuthority,
     isSuperAdmin,
-    isAdvancedAdmin
+    isAdvancedAdmin,
+    mobileMenuOpen,
+    setMobileMenuOpen
   } = useApp();
 
   // If not logged in, show protected AuthGate landing restriction fitting in single page
@@ -301,18 +304,29 @@ const MainLayout = () => {
         </div>
       )}
       
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="mobile-drawer-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <div style={{ display: 'flex', flex: 1, height: previewRole ? 'calc(100vh - 56px - 34px)' : 'calc(100vh - 56px)', overflow: 'hidden' }}>
         <Sidebar />
         
-        <main style={{
-          flex: 1,
-          padding: '1.25rem 1.75rem',
-          maxWidth: '1440px',
-          width: '100%',
-          margin: '0 auto',
-          overflowY: 'auto',
-          minWidth: 0
-        }}>
+        <main 
+          className="app-main-content"
+          style={{
+            flex: 1,
+            padding: '1.25rem 1.75rem',
+            maxWidth: '1440px',
+            width: '100%',
+            margin: '0 auto',
+            overflowY: 'auto',
+            minWidth: 0
+          }}
+        >
           {currentTab === 'folders' && <FoldersView />}
           {currentTab === 'inter_org' && <InterInstitutionalHub />}
           {currentTab === 'news' && <NewsView />}
@@ -334,6 +348,7 @@ const MainLayout = () => {
       <OrgCustomizationModal />
       <PrivateAccessModal />
       <InstitutionExplorerModal />
+      <BottomNav />
     </div>
   );
 };

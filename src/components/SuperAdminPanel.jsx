@@ -41,6 +41,7 @@ export const SuperAdminPanel = () => {
     promoteToInstitutionAdmin,
     assignAuthorityToOrg,
     requestInstitutionCreation,
+    createAndActivateInstitution,
     selectOrg,
     activeOrgId,
     setCurrentTab,
@@ -125,23 +126,37 @@ export const SuperAdminPanel = () => {
 
   const handleCreateRequest = (e) => {
     e.preventDefault();
-    if (!instName.trim() || !applicantName.trim()) return;
+    if (!instName.trim() || !applicantName.trim()) {
+      alert('Por favor completa el nombre de la institución y del solicitante.');
+      return;
+    }
 
-    requestInstitutionCreation({
+    const payload = {
       name: instName.trim(),
       type: instType,
       cue: instCue.trim() || 'REG-PENDIENTE',
-      address: instAddress.trim(),
-      city: instCity.trim(),
-      province: instProvince.trim(),
+      address: instAddress.trim() || 'Sede Institucional',
+      city: instCity.trim() || 'Localidad Principal',
+      province: instProvince.trim() || 'Buenos Aires',
       officialEmail: instEmail.trim(),
       officialPhone: instPhone.trim(),
       applicantName: applicantName.trim(),
-      applicantDni: applicantDni.trim(),
+      applicantDni: applicantDni.trim() || 'DNI-REG',
       applicantRole,
       applicantPhone: instPhone.trim(),
       description: instDescription.trim() || 'Institución comprometida con la educación y formación comunitaria.'
-    });
+    };
+
+    if (createAndActivateInstitution) {
+      createAndActivateInstitution(payload);
+      setAdminFeedback({
+        type: 'success',
+        text: `✅ Institución "${instName.trim()}" creada y habilitada inmediatamente en la plataforma.`
+      });
+      setTimeout(() => setAdminFeedback(null), 4000);
+    } else {
+      requestInstitutionCreation(payload);
+    }
 
     // Reset
     setInstName('');

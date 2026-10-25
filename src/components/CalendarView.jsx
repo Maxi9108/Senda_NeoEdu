@@ -727,12 +727,15 @@ export const CalendarView = () => {
 
       {/* Main Grid View */}
       {viewMode === 'grid' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: selectedDayEvents ? 'minmax(0, 1fr) 350px' : '1fr',
-          gap: '1.25rem',
-          alignItems: 'start'
-        }}>
+        <div 
+          className="calendar-main-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: selectedDayEvents ? 'minmax(0, 1fr) 350px' : '1fr',
+            gap: '1.25rem',
+            alignItems: 'start'
+          }}
+        >
           {/* Calendar Grid Table */}
           <div className="glass-panel" style={{
             background: 'var(--bg-surface)',

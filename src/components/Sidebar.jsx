@@ -20,7 +20,18 @@ import {
   Crown,
   Building2,
   Star,
-  LogOut
+  LogOut,
+  X,
+  Sun,
+  Moon,
+  Type,
+  Download,
+  Share2,
+  Palette,
+  Cloud,
+  RefreshCw,
+  Check,
+  Compass
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -33,13 +44,33 @@ export const Sidebar = () => {
     setModalConfig,
     canEdit,
     isAdmin,
+    isAdult,
     isSuperAdmin,
     isAdvancedAdmin,
     hasSuperOrAdvancedAccess,
     currentUserRole,
     canAccessFolder,
-    logout
+    logout,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+    currentUser,
+    theme,
+    setTheme,
+    fontSize,
+    setFontSize,
+    driveSyncState,
+    syncWithDriveNow,
+    setBackupModalOpen,
+    setShareModalOpen,
+    setOrgCustomizationModalOpen,
+    setProfileModalOpen
   } = useApp();
+
+  const handleFontSizeCycle = () => {
+    if (fontSize === 'normal') setFontSize('large');
+    else if (fontSize === 'large') setFontSize('extra-large');
+    else setFontSize('normal');
+  };
 
   const navItems = [
     { id: 'folders', label: 'Carpetas & Secciones', icon: FolderKanban },
@@ -56,21 +87,228 @@ export const Sidebar = () => {
   ];
 
   return (
-    <aside style={{
-      width: '260px',
-      minWidth: '260px',
-      background: 'var(--bg-surface)',
-      borderRight: '1px solid var(--border-color)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '0.85rem 0.65rem',
-      gap: '0.85rem',
-      flexShrink: 0,
-      height: '100%',
-      overflowY: 'auto'
-    }}>
-      {/* Quick Action Button (if canEdit) */}
-      {canEdit ? (
+    <aside 
+      className={`app-sidebar ${mobileMenuOpen ? 'open' : ''}`}
+      style={{
+        background: 'var(--bg-surface)',
+        borderRight: '1px solid var(--border-color)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '0.85rem 0.65rem',
+        gap: '0.85rem',
+        overflowY: 'auto'
+      }}
+    >
+      {/* Mobile Drawer Header (Visible only on mobile <= 768px) */}
+      <div className="sidebar-mobile-header">
+        <div 
+          onClick={() => { if (setProfileModalOpen) setProfileModalOpen(true); if (setMobileMenuOpen) setMobileMenuOpen(false); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer' }}
+        >
+          {currentUser?.avatar ? (
+            <img 
+              src={currentUser.avatar} 
+              alt={currentUser.name} 
+              style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-full)', objectFit: 'cover', border: '1px solid var(--border-color)' }} 
+            />
+          ) : (
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--primary-light)',
+              color: 'var(--primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              {currentUser?.name?.charAt(0) || 'U'}
+            </div>
+          )}
+          <div style={{ lineHeight: 1.2 }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              {currentUser?.name || 'Usuario'}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {isSuperAdmin ? 'Super Administrador' : (isAdmin ? 'Administrador' : (isAdult ? 'Educador' : 'Protagonista'))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-label="Cerrar menú"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-muted)',
+            cursor: 'pointer'
+          }}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Mobile Quick Action Tools Toolbar (Visible only on mobile <= 768px) */}
+      <div 
+        className="sidebar-mobile-header" 
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.4rem',
+          paddingBottom: '0.65rem',
+          marginBottom: '0.2rem',
+          borderBottom: '1px solid var(--border-color)'
+        }}
+      >
+        {/* Drive Sync */}
+        <button
+          onClick={syncWithDriveNow}
+          title="Sincronizar datos con Google Sheets"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer'
+          }}
+        >
+          {driveSyncState === 'syncing' ? (
+            <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite', color: '#0284c7' }} />
+          ) : driveSyncState === 'synced' ? (
+            <Check size={14} style={{ color: '#16a34a' }} />
+          ) : (
+            <Cloud size={14} style={{ color: '#0284c7' }} />
+          )}
+        </button>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={() => {
+            if (theme === 'neofaro' || theme === 'forest') setTheme('light');
+            else setTheme('neofaro');
+          }}
+          title="Cambiar tema visual"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer'
+          }}
+        >
+          {theme === 'neofaro' || theme === 'forest' ? (
+            <Compass size={14} style={{ color: 'var(--faro-cyan-light)' }} />
+          ) : (
+            <Sun size={14} style={{ color: '#ea580c' }} />
+          )}
+        </button>
+
+        {/* Font size */}
+        <button
+          onClick={handleFontSizeCycle}
+          title="Tamaño de texto"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer'
+          }}
+        >
+          <Type size={14} style={{ color: 'var(--primary)' }} />
+        </button>
+
+        {/* Share */}
+        <button
+          onClick={() => { if (setShareModalOpen) setShareModalOpen(true); if (setMobileMenuOpen) setMobileMenuOpen(false); }}
+          title="Compartir institución"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--primary-light)',
+            border: '1px solid rgba(21, 128, 61, 0.3)',
+            color: 'var(--primary-text)',
+            cursor: 'pointer'
+          }}
+        >
+          <Share2 size={14} />
+        </button>
+
+        {/* Backup */}
+        <button
+          onClick={() => { if (setBackupModalOpen) setBackupModalOpen(true); if (setMobileMenuOpen) setMobileMenuOpen(false); }}
+          title="Exportar copia de seguridad"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '34px',
+            height: '34px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer'
+          }}
+        >
+          <Download size={14} />
+        </button>
+
+        {/* Customize (Admin only) */}
+        {isAdmin && (
+          <button
+            onClick={() => { if (setOrgCustomizationModalOpen) setOrgCustomizationModalOpen(true); if (setMobileMenuOpen) setMobileMenuOpen(false); }}
+            title="Personalizar colores y escudo"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '34px',
+              height: '34px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-main)',
+              cursor: 'pointer'
+            }}
+          >
+            <Palette size={14} style={{ color: 'var(--primary)' }} />
+          </button>
+        )}
+      </div>
+      {/* Quick Action Button (if canEdit or isAdult) */}
+      {(canEdit || isAdult) ? (
         <button
           onClick={() => setModalConfig({ isOpen: true, type: 'selector' })}
           style={{
@@ -103,7 +341,7 @@ export const Sidebar = () => {
           lineHeight: 1.35,
           wordBreak: 'break-word'
         }}>
-          👀 Navegando como Familia / Protagonista
+          👀 Navegando como Protagonista
         </div>
       )}
 
@@ -130,7 +368,10 @@ export const Sidebar = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentTab(item.id)}
+                onClick={() => {
+                  setCurrentTab(item.id);
+                  if (setMobileMenuOpen) setMobileMenuOpen(false);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
@@ -208,7 +449,10 @@ export const Sidebar = () => {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
           <button
-            onClick={() => selectFolder('all')}
+            onClick={() => {
+              selectFolder('all');
+              if (setMobileMenuOpen) setMobileMenuOpen(false);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -238,7 +482,10 @@ export const Sidebar = () => {
             return (
               <button
                 key={f.id}
-                onClick={() => selectFolder(f.id)}
+                onClick={() => {
+                  selectFolder(f.id);
+                  if (setMobileMenuOpen) setMobileMenuOpen(false);
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',

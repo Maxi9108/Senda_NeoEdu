@@ -24,7 +24,8 @@ import {
   Star, 
   UserCheck,
   Eye,
-  Building2
+  Building2,
+  Menu
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -37,6 +38,8 @@ export const Navbar = () => {
     currentOrg, 
     activeFolderId, 
     setActiveFolderId,
+    mobileMenuOpen,
+    setMobileMenuOpen,
     theme, 
     setTheme, 
     fontSize, 
@@ -218,6 +221,28 @@ export const Navbar = () => {
     }}>
       {/* Brand & Organization Selector */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+        {/* Mobile Hamburger Drawer Toggle */}
+        <button
+          type="button"
+          className="navbar-mobile-toggle"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer',
+            flexShrink: 0
+          }}
+        >
+          <Menu size={18} />
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <div style={{
             background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
@@ -333,8 +358,8 @@ export const Navbar = () => {
         )}
       </div>
 
-      {/* Global Search Bar */}
-      <div style={{
+      {/* Global Search Bar (Desktop only) */}
+      <div className="navbar-desktop-tools" style={{
         flex: '0 1 65px',
         maxWidth: '75px',
         minWidth: '32px',
@@ -379,8 +404,10 @@ export const Navbar = () => {
         overflow: 'visible',
         paddingRight: '0.35rem'
       }}>
-        {/* Adult Preview Role Toggle */}
-        {isRealAdult && (
+        {/* Desktop Quick Tools */}
+        <div className="navbar-desktop-tools" style={{ display: 'flex', alignItems: 'center', gap: '0.18rem' }}>
+          {/* Adult Preview Role Toggle */}
+          {isRealAdult && (
           <div ref={previewMenuRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setPreviewMenuOpen(!previewMenuOpen)}
@@ -646,8 +673,9 @@ export const Navbar = () => {
 
         {/* Separator */}
         <div style={{ width: '1px', height: '16px', background: 'var(--border-color)', margin: '0 1px', flexShrink: 0 }} />
+      </div>
 
-        {/* Authenticated User Status & Logout */}
+      {/* Authenticated User Status & Logout */}
         {isLoggedIn && currentUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
             <button

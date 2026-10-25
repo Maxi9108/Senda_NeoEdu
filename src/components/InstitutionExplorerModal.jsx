@@ -22,7 +22,8 @@ import {
   Sparkles,
   Info,
   Layers,
-  FileText
+  FileText,
+  Rocket
 } from 'lucide-react';
 
 export const InstitutionExplorerModal = () => {
@@ -34,6 +35,7 @@ export const InstitutionExplorerModal = () => {
     requestAffiliationToOrg,
     cancelAffiliationRequest,
     requestInstitutionCreation,
+    createAndActivateInstitution,
     availableUserOrgs,
     switchUserOrg,
     selectOrg
@@ -56,6 +58,8 @@ export const InstitutionExplorerModal = () => {
 
   // Institution Creation Form State
   const [createSentSuccess, setCreateSentSuccess] = useState(false);
+  const [autoActivate, setAutoActivate] = useState(true);
+  const [createdOrgData, setCreatedOrgData] = useState(null);
   const [instForm, setInstForm] = useState({
     name: '',
     type: 'scout',
@@ -73,7 +77,7 @@ export const InstitutionExplorerModal = () => {
     applicantDni: '',
     applicantPhone: currentUser?.phone || '',
     applicantEmail: currentUser?.email || '',
-    applicantRole: 'Educador Adulto Fundador',
+    applicantRole: 'Jefe de Grupo / Responsable',
     needsAuthorityAssignment: false
   });
 
@@ -160,32 +164,46 @@ export const InstitutionExplorerModal = () => {
 
   const handleCreateOrgSubmit = (e) => {
     e.preventDefault();
-    if (!instForm.name.trim() || !instForm.applicantName.trim() || !instForm.applicantEmail.trim()) {
-      alert('Por favor completa el nombre de la institución y los datos del adulto solicitante.');
+    if (!instForm.name.trim()) {
+      alert('Por favor completa el nombre de la institución o grupo.');
+      return;
+    }
+    if (!instForm.applicantName.trim()) {
+      alert('Por favor completa el nombre del adulto solicitante / responsable.');
       return;
     }
 
-    requestInstitutionCreation({
+    const payload = {
       ...instForm,
       name: instForm.name.trim(),
       type: instForm.type,
       badge: instForm.badge.trim() || (instForm.type === 'scout' ? 'Grupo Scout' : 'Institución Educativa'),
       cue: instForm.cue.trim() || 'REG-PENDIENTE',
       country: instForm.country.trim() || 'Argentina',
-      province: instForm.province.trim(),
-      department: instForm.department.trim(),
-      city: instForm.city.trim(),
-      address: instForm.address.trim(),
+      province: instForm.province.trim() || 'Buenos Aires',
+      department: instForm.department.trim() || 'Sede Central',
+      partido: instForm.department.trim() || 'Sede Central',
+      city: instForm.city.trim() || 'Localidad Principal',
+      localidad: instForm.city.trim() || 'Localidad Principal',
+      address: instForm.address.trim() || 'Sede Institucional',
       officialEmail: instForm.officialEmail.trim(),
       officialPhone: instForm.officialPhone.trim(),
       description: instForm.description.trim() || 'Institución comprometida con la formación comunitaria.',
       applicantName: instForm.applicantName.trim(),
-      applicantDni: instForm.applicantDni.trim(),
-      applicantPhone: instForm.applicantPhone.trim(),
-      applicantEmail: instForm.applicantEmail.trim(),
-      applicantRole: instForm.applicantRole.trim(),
+      applicantDni: instForm.applicantDni.trim() || 'DNI-REG',
+      applicantPhone: instForm.applicantPhone.trim() || instForm.officialPhone.trim(),
+      applicantEmail: instForm.applicantEmail.trim() || currentUser?.email || '',
+      applicantRole: instForm.applicantRole.trim() || (instForm.type === 'scout' ? 'Jefe de Grupo' : 'Director / Responsable'),
       needsAuthorityAssignment: instForm.needsAuthorityAssignment
-    });
+    };
+
+    if (autoActivate && createAndActivateInstitution) {
+      const res = createAndActivateInstitution(payload);
+      setCreatedOrgData(res.org);
+    } else {
+      const res = requestInstitutionCreation(payload);
+      setCreatedOrgData({ ...payload, id: res.reqId, pending: true });
+    }
 
     setCreateSentSuccess(true);
   };
@@ -894,25 +912,61 @@ export const InstitutionExplorerModal = () => {
                     <CheckCircle2 size={32} />
                   </div>
                   <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                    ¡Solicitud de Fundación Enviada!
+                    {createdOrgData && !createdOrgData.pending 
+                      ? `¡${instForm.name} Creada y Habilitada con Éxito!` 
+                      : '¡Solicitud de Fundación Enviada!'}
                   </h3>
                   <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.45 }}>
-                    La institución <strong>{instForm.name}</strong> fue enviada con su información geográfica completa al Super Administrador y Administradores Generales para su verificación y activación en la red.
+                    {createdOrgData && !createdOrgData.pending
+                      ? 'La institución / grupo ha sido dada de alta y activada en tu cuenta con rol de Responsable Institucional. Ya podés comenzar a cargar integrantes, ramas y planificaciones de inmediato.'
+                      : `La institución ${instForm.name} fue enviada con su información geográfica completa al Super Administrador y Administradores Generales para su verificación y activación en la red.`}
                   </p>
-                  <button
-                    onClick={() => { setCreateSentSuccess(false); setActiveTab('search'); }}
-                    style={{
-                      padding: '0.55rem 1.25rem',
-                      background: 'var(--gradient-faro)',
-                      color: '#fff',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Volver a Explorar Instituciones
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    {createdOrgData && !createdOrgData.pending ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCreateSentSuccess(false);
+                          setInstitutionExplorerOpen(false);
+                          if (createdOrgData?.id) {
+                            if (switchUserOrg) switchUserOrg(createdOrgData.id);
+                            else selectOrg(createdOrgData.id);
+                          }
+                        }}
+                        style={{
+                          padding: '0.65rem 1.4rem',
+                          background: 'var(--gradient-faro)',
+                          color: '#fff',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.86rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: 'var(--faro-glow)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <Rocket size={16} />
+                        <span>Comenzar a Cargar la Institución Ahora</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setCreateSentSuccess(false); setActiveTab('search'); }}
+                        style={{
+                          padding: '0.55rem 1.25rem',
+                          background: 'var(--gradient-faro)',
+                          color: '#fff',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Volver a Explorar Instituciones
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleCreateOrgSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1281,27 +1335,52 @@ export const InstitutionExplorerModal = () => {
                         </span>
                       </label>
                     </div>
+                    {/* Immediate activation toggle */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '0.6rem',
+                      background: 'rgba(16, 185, 129, 0.09)',
+                      padding: '0.75rem 0.9rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      marginTop: '0.65rem'
+                    }}>
+                      <input
+                        type="checkbox"
+                        id="chkAutoActivate"
+                        checked={autoActivate}
+                        onChange={(e) => setAutoActivate(e.target.checked)}
+                        style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      <label htmlFor="chkAutoActivate" style={{ fontSize: '0.78rem', color: 'var(--text-main)', cursor: 'pointer', lineHeight: 1.4 }}>
+                        <strong style={{ color: '#34d399' }}>Habilitar y Activar Inmediatamente (Recomendado):</strong><br />
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Crea la institución al instante y te asigna como responsable para que puedas comenzar a cargar integrantes, ramas y cronogramas sin demoras ni trámites de espera.
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
                     <button
                       type="submit"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.6rem 1.4rem',
-                        background: 'var(--gradient-nature)',
+                        gap: '0.45rem',
+                        padding: '0.7rem 1.6rem',
+                        background: 'var(--gradient-faro)',
                         color: '#ffffff',
                         borderRadius: 'var(--radius-md)',
-                        fontSize: '0.84rem',
+                        fontSize: '0.86rem',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        boxShadow: 'var(--shadow-md)'
+                        boxShadow: 'var(--faro-glow)'
                       }}
                     >
                       <Building2 size={16} />
-                      <span>Registrar y Enviar para Aprobación</span>
+                      <span>{autoActivate ? 'Crear y Habilitar Institución / Grupo' : 'Registrar y Enviar para Aprobación'}</span>
                     </button>
                   </div>
                 </form>
