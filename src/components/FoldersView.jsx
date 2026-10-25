@@ -157,7 +157,9 @@ export const FoldersView = () => {
                   justifyContent: 'space-between',
                   borderRadius: 'var(--radius-lg)',
                   border: `1px solid ${isRestricted ? 'rgba(217, 119, 6, 0.3)' : 'var(--border-color)'}`,
-                  background: 'var(--bg-card)',
+                  background: folder.bgImage 
+                    ? `linear-gradient(rgba(18, 28, 46, 0.85), rgba(18, 28, 46, 0.95)), url(${folder.bgImage}) center/cover`
+                    : (folder.bannerBg || 'var(--bg-card)'),
                   borderTop: `4px solid ${folderColor}`
                 }}
               >

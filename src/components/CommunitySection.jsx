@@ -297,7 +297,9 @@ export const CommunitySection = () => {
       <div className="glass-panel" style={{
         padding: '1.75rem',
         borderRadius: 'var(--radius-lg)',
-        background: folder.bannerBg || `linear-gradient(135deg, ${folder.color}25, var(--bg-card))`,
+        background: folder.bgImage 
+          ? `linear-gradient(rgba(14, 21, 36, 0.75), rgba(14, 21, 36, 0.9)), url(${folder.bgImage}) center/cover` 
+          : (folder.bannerBg || `linear-gradient(135deg, ${folder.color}25, var(--bg-card))`),
         borderLeft: `6px solid ${folder.color || currentOrg.color}`,
         position: 'relative',
         display: 'flex',

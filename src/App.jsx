@@ -144,7 +144,11 @@ const MainLayout = () => {
       width: '100vw',
       maxHeight: '100vh',
       maxWidth: '100vw',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      backgroundImage: currentOrg?.bgImage ? `linear-gradient(rgba(8, 12, 20, 0.90), rgba(8, 12, 20, 0.94)), url(${currentOrg.bgImage})` : undefined,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundAttachment: 'fixed'
     }}>
       <Navbar />
 
