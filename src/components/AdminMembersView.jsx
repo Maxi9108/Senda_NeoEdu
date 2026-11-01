@@ -44,6 +44,7 @@ export const AdminMembersView = () => {
     deleteMember, 
     approveMember,
     canDeleteMember,
+    toggleMemberCalendarPermission,
     setModalConfig,
     setCurrentTab
   } = useApp();
@@ -758,6 +759,40 @@ export const AdminMembersView = () => {
                           🎂 {member.birthDate} ({member.age !== undefined && member.age !== null ? `${member.age} años` : ''})
                         </div>
                       )}
+                      {member.role === 'student' && (
+                        <div style={{ marginTop: '0.35rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              toggleMemberCalendarPermission(member.id);
+                              const willBeAuth = member.canSubmitCalendarActivities === false;
+                              setFeedbackNotice({
+                                type: 'success',
+                                text: `📅 Permiso de actividades en calendario ${willBeAuth ? 'Habilitado' : 'Deshabilitado'} para ${member.name}.`
+                              });
+                              setTimeout(() => setFeedbackNotice(null), 3500);
+                            }}
+                            disabled={!isAuthority && !isAdultEducator}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              cursor: (isAuthority || isAdultEducator) ? 'pointer' : 'default',
+                              background: member.canSubmitCalendarActivities !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(148, 163, 184, 0.15)',
+                              color: member.canSubmitCalendarActivities !== false ? '#22c55e' : '#94a3b8',
+                              border: `1px solid ${member.canSubmitCalendarActivities !== false ? '#22c55e' : '#64748b'}`
+                            }}
+                            title="Autorizar o revocar permiso para que este protagonista proponga actividades en el calendario de su subgrupo (sujetas a aprobación adulta)"
+                          >
+                            <Sparkles size={11} />
+                            <span>{member.canSubmitCalendarActivities !== false ? '✓ Calendario: Puede proponer' : '🔒 Sin permiso calendario'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1143,6 +1178,60 @@ export const AdminMembersView = () => {
                 </div>
               )}
             </div>
+
+            {/* Youth Calendar Activity Permission Toggle */}
+            {inspectedMember.role === 'student' && (
+              <div style={{
+                background: 'var(--bg-input)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '0.75rem',
+                border: '1px solid var(--border-color)'
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.84rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Sparkles size={14} style={{ color: '#f59e0b' }} />
+                    <span>Carga de Actividades en Calendario de Subgrupo</span>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginTop: '2px' }}>
+                    Permite a este niño/a o joven proponer actividades en el calendario de su rama (sujetas a aprobación de un adulto).
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleMemberCalendarPermission(inspectedMember.id);
+                    const willBeAuth = inspectedMember.canSubmitCalendarActivities === false;
+                    setInspectedMember({
+                      ...inspectedMember,
+                      canSubmitCalendarActivities: willBeAuth
+                    });
+                    setFeedbackNotice({
+                      type: 'success',
+                      text: `📅 Permiso de actividades en calendario ${willBeAuth ? 'Habilitado' : 'Deshabilitado'} para ${inspectedMember.name}.`
+                    });
+                    setTimeout(() => setFeedbackNotice(null), 3000);
+                  }}
+                  disabled={!isAuthority && !isAdultEducator}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: (isAuthority || isAdultEducator) ? 'pointer' : 'default',
+                    background: inspectedMember.canSubmitCalendarActivities !== false ? '#15803d' : 'var(--bg-surface)',
+                    color: '#ffffff',
+                    border: `1px solid ${inspectedMember.canSubmitCalendarActivities !== false ? '#22c55e' : 'var(--border-color)'}`,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {inspectedMember.canSubmitCalendarActivities !== false ? '✓ Autorizado' : '🔒 Desautorizado'}
+                </button>
+              </div>
+            )}
 
             {/* Presentation & Wishes */}
             <div style={{

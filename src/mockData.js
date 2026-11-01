@@ -117,9 +117,9 @@ export const initialData = {
       icon: "Compass",
       status: "approved",
       folders: [
-        { 
-          id: "f-scout-all", 
-          name: "General / Todo el Grupo", 
+        {
+          id: "f-scout-all",
+          name: "General / Todo el Grupo",
           ageRange: "Todas las edades (7 a 21 años)",
           color: "#15803d",
           bannerBg: "linear-gradient(135deg, #15803d22, #d9770615)",
@@ -155,12 +155,12 @@ export const initialData = {
             { id: "gal-2", title: "Jornada de Padres y Reparación de Carpas", url: "https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=600&q=80", date: "2026-10-18", eventTag: "Comunidad" }
           ]
         },
-        { 
-          id: "f-scout-manada", 
-          name: "🐺 Manada de Lobatos y Lobeznas", 
+        {
+          id: "f-scout-manada",
+          name: "🐺 Manada de Lobatos y Lobeznas",
           ageRange: "7 a 11 años",
           color: "#f59e0b",
-          bannerBg: "linear-gradient(135deg, #f59e0b25, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #f59e0b25, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/ManadaSeeonee142Padres",
           isPrivateAdultOnly: false,
           reminderNotice: "🐺 ¡Aviso para Familias de Lobatos! Recuerden armar la mochila con cantimplora, gorra y plato hondo marcado con nombre.",
@@ -201,12 +201,12 @@ export const initialData = {
             { id: "gal-m1", title: "Ronda de Lobeznas: Danza de Baloo", url: "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=600&q=80", date: "2026-10-17", eventTag: "Juegos" }
           ]
         },
-        { 
-          id: "f-scout-unidad", 
-          name: "⚜️ Unidad Scout (Patrullas)", 
+        {
+          id: "f-scout-unidad",
+          name: "⚜️ Unidad Scout (Patrullas)",
           ageRange: "11 a 14 años",
           color: "#16a34a",
-          bannerBg: "linear-gradient(135deg, #16a34a25, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #16a34a25, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/UnidadScout142Comunidad",
           isPrivateAdultOnly: false,
           reminderNotice: "⚜️ ¡Scouts y Familias! Tienen cargada la lista de materiales para la salida de campo. Revisen y tachen lo que ya tengan listo.",
@@ -239,12 +239,12 @@ export const initialData = {
             { id: "gal-u2", title: "Gran Juego Nocturno de Orientación", url: "https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=600&q=80", date: "2026-10-14", eventTag: "Naturaleza" }
           ]
         },
-        { 
-          id: "f-scout-caminantes", 
-          name: "🌲 Comunidad Caminantes", 
+        {
+          id: "f-scout-caminantes",
+          name: "🌲 Comunidad Caminantes",
           ageRange: "14 a 17 años",
           color: "#0284c7",
-          bannerBg: "linear-gradient(135deg, #0284c725, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #0284c725, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/Caminantes142Oficial",
           isPrivateAdultOnly: false,
           reminderNotice: "🌲 ¡Atención Caminantes! No olvidar llevar aislante térmico, botiquín personal y linterna frontal con pilas nuevas.",
@@ -266,12 +266,12 @@ export const initialData = {
             { id: "gal-c1", title: "Caminata de Ascenso al Cerro La Ventana", url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80", date: "2026-10-02", eventTag: "Trekking" }
           ]
         },
-        { 
-          id: "f-scout-rover", 
-          name: "⛵ Comunidad Rover 'Servir'", 
+        {
+          id: "f-scout-rover",
+          name: "⛵ Comunidad Rover 'Servir'",
           ageRange: "17 a 21 años",
           color: "#dc2626",
-          bannerBg: "linear-gradient(135deg, #dc262625, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #dc262625, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/RoverComunidad142",
           isPrivateAdultOnly: false,
           reminderNotice: "⛵ ¡Rovers! Confirmar asistencia para la jornada comunitaria de pintura y llevar herramientas de trabajo.",
@@ -293,9 +293,9 @@ export const initialData = {
             { id: "gal-r1", title: "Construcción de Huerta en Comedor Barrial", url: "https://images.unsplash.com/photo-1592417817098-8f3d6eb22509?auto=format&fit=crop&w=600&q=80", date: "2026-10-19", eventTag: "Servicio" }
           ]
         },
-        { 
-          id: "f-scout-jefatura", 
-          name: "🎖️ Consejo de Grupo & Dirigentes", 
+        {
+          id: "f-scout-jefatura",
+          name: "🎖️ Consejo de Grupo & Dirigentes",
           ageRange: "Adultos Educadores (18+ años)",
           color: "#7c3aed",
           bannerBg: "linear-gradient(135deg, #7c3aed25, #0f172a15)",
@@ -342,12 +342,12 @@ export const initialData = {
       icon: "GraduationCap",
       status: "approved",
       folders: [
-        { 
-          id: "f-edu-all", 
-          name: "Institucional General", 
+        {
+          id: "f-edu-all",
+          name: "Institucional General",
           ageRange: "Comunidad Educativa Completa",
           color: "#0284c7",
-          bannerBg: "linear-gradient(135deg, #0284c725, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #0284c725, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/LosRoblesComunidadGeneral",
           isPrivateAdultOnly: false,
           reminderNotice: "📚 Recordatorio: Presentar cuadernos de comunicados firmados y autorización para salidas pedagógicas.",
@@ -358,12 +358,12 @@ export const initialData = {
             { id: "gal-e1", title: "Feria de Ciencias y Arte 2026", url: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=600&q=80", date: "2026-10-18", eventTag: "Feria de Ciencias" }
           ]
         },
-        { 
-          id: "f-edu-primaria", 
-          name: "📚 Nivel Primario (1° a 6° Grado)", 
+        {
+          id: "f-edu-primaria",
+          name: "📚 Nivel Primario (1° a 6° Grado)",
           ageRange: "6 a 12 años",
           color: "#16a34a",
-          bannerBg: "linear-gradient(135deg, #16a34a25, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #16a34a25, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/PrimariaLosRoblesPadres",
           isPrivateAdultOnly: false,
           reminderNotice: "🎒 Familias de Primaria: Recuerden enviar la cartuchera completa, tijera de punta roma y la merienda saludable.",
@@ -374,12 +374,12 @@ export const initialData = {
             { id: "gal-ep1", title: "Muestra de Proyectos del Sistema Solar", url: "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80", date: "2026-10-12", eventTag: "Primaria" }
           ]
         },
-        { 
-          id: "f-edu-secundaria", 
-          name: "🔬 Nivel Secundario y Bachillerato", 
+        {
+          id: "f-edu-secundaria",
+          name: "🔬 Nivel Secundario y Bachillerato",
           ageRange: "12 a 18 años",
           color: "#7c3aed",
-          bannerBg: "linear-gradient(135deg, #7c3aed25, #ffffff)",
+          bannerBg: "linear-gradient(135deg, #7c3aed25, var(--bg-card))",
           whatsappLink: "https://chat.whatsapp.com/SecundariaLosRoblesAvisos",
           isPrivateAdultOnly: false,
           reminderNotice: "🔬 Estudiantes: Traer guardapolvo blanco para el laboratorio de química y calculadora científica.",
@@ -390,9 +390,9 @@ export const initialData = {
             { id: "gal-es1", title: "Prácticas en Laboratorio de Química", url: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=600&q=80", date: "2026-10-15", eventTag: "Laboratorio" }
           ]
         },
-        { 
-          id: "f-edu-directivo", 
-          name: "🏛️ Sala de Profesores & Equipo Directivo", 
+        {
+          id: "f-edu-directivo",
+          name: "🏛️ Sala de Profesores & Equipo Directivo",
           ageRange: "Cuerpo Docente y Directivos",
           color: "#b91c1c",
           bannerBg: "linear-gradient(135deg, #b91c1c25, #0f172a15)",
@@ -562,6 +562,7 @@ export const initialData = {
       roleLabel: "Scout Protagonista (Patrulla Halcones)",
       branchId: "f-scout-unidad",
       status: "active",
+      canSubmitCalendarActivities: true,
       avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=150&q=80",
       showPublicPhone: false,
       showPublicEmail: false
@@ -691,6 +692,34 @@ export const initialData = {
         { id: "req-u3", name: "Vianda de almuerzo fría (sándwich / fruta)", checked: false },
         { id: "req-u4", name: "Botiquín personal de patrulla", checked: false },
         { id: "req-u5", name: "Repelente de mosquitos y protector solar", checked: false }
+      ]
+    },
+    {
+      id: "ev-youth-pending-1",
+      orgId: "org-scout-1",
+      folderId: "f-scout-unidad",
+      branchName: "Unidad Scout",
+      badgeColor: "#16a34a",
+      isGroupWide: false,
+      title: "Fogón Juvenil y Taller de Cantos y Mística Scout",
+      date: "2026-11-10",
+      startTime: "18:00",
+      endTime: "20:30",
+      type: "Actividad Propuesta por Jóvenes",
+      location: "Patio Trasero del Predio Scout",
+      notes: "Propuesta armada por las patrullas para practicar canciones scouts, mística de fogón y leyendas tradicionales.",
+      approvalStatus: "pending",
+      isApproved: false,
+      proposedBy: {
+        id: "mem-5",
+        name: "Mateo Rinaldi",
+        role: "student",
+        branchName: "Unidad Scout"
+      },
+      createdAt: "2026-10-25T16:00:00.000Z",
+      requiredMaterials: [
+        { id: "req-yp-1", name: "Cancionero de fogón y guitarra", checked: false },
+        { id: "req-yp-2", name: "Leña seca y piñas para encendido", checked: true }
       ]
     },
     {

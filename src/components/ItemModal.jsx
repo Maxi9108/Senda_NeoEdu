@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { 
-  X, 
-  Rocket, 
-  Calendar, 
-  Clock, 
-  UserPlus, 
-  FolderPlus, 
-  Building2, 
-  Globe, 
-  Lock, 
+import {
+  X,
+  Rocket,
+  Calendar,
+  Clock,
+  UserPlus,
+  FolderPlus,
+  Building2,
+  Globe,
+  Lock,
   ShieldCheck,
   Tag,
   Compass,
@@ -23,25 +23,35 @@ import {
 } from 'lucide-react';
 
 export const ItemModal = () => {
-  const { 
-    modalConfig, 
-    setModalConfig, 
-    currentOrg, 
-    addProject, 
-    addEvent, 
-    addDailyBlock, 
-    addOrgNode, 
-    addFolder, 
+  const {
+    modalConfig,
+    setModalConfig,
+    currentOrg,
+    activeFolderId,
+    effectiveRole,
+    currentFolder,
+    addProject,
+    addEvent,
+    addDailyBlock,
+    addOrgNode,
+    addFolder,
     addOrganization,
     createAndActivateInstitution,
+    selectOrg,
+    switchUserOrg,
     addMember,
     requestInstitutionCreation,
     approveInstitutionBySuperAdmin,
     currentUser,
+    isAdmin,
+    isAdvancedAdmin,
     isSuperAdmin,
     setCurrentTab,
-    data 
+    setInstitutionExplorerOpen,
+    data
   } = useApp();
+
+  const isCreatorAdmin = isAdmin || isAdvancedAdmin || isSuperAdmin;
 
   const { isOpen, type, payload } = modalConfig;
 
@@ -155,10 +165,16 @@ export const ItemModal = () => {
     close();
   };
 
+  const isYouthProposal = payload?.isYouthProposal || effectiveRole === 'student';
+
   const handleCreateEvent = (e) => {
     e.preventDefault();
     addEvent({
-      ...eventForm
+      ...eventForm,
+      folderId: isYouthProposal
+        ? (eventForm.folderId || payload?.folderId || activeFolderId || (currentOrg?.folders?.[0]?.id || null))
+        : (eventForm.folderId || payload?.folderId || activeFolderId || null),
+      isGroupWide: isYouthProposal ? false : eventForm.isGroupWide
     });
     close();
   };
@@ -241,18 +257,21 @@ export const ItemModal = () => {
       needsAuthorityAssignment: !!orgForm.needsAuthorityAssignment
     };
 
-    const autoApprove = orgForm.autoApproveIfSuperAdmin ?? true;
+    const shouldAutoApprove = isCreatorAdmin && (orgForm.autoApproveIfSuperAdmin ?? true);
     let res;
-    if (autoApprove && createAndActivateInstitution) {
+    if (shouldAutoApprove && createAndActivateInstitution) {
       res = createAndActivateInstitution(payload);
+      if (res?.org?.id && selectOrg) {
+        selectOrg(res.org.id);
+      }
     } else {
-      res = requestInstitutionCreation(payload);
+      res = requestInstitutionCreation({ ...payload, forcePending: true });
     }
 
     setCreatedOrgSummary({
       ...payload,
-      id: res?.reqId || res?.org?.id,
-      autoApproved: autoApprove
+      id: res?.org?.id || res?.reqId,
+      autoApproved: shouldAutoApprove
     });
     setOrgCreatedSuccess(true);
   };
@@ -287,7 +306,7 @@ export const ItemModal = () => {
           <h2 style={{ fontSize: '1.25rem' }}>
             {type === 'selector' && '¿Qué deseas crear?'}
             {type === 'new_project' && 'Nuevo Proyecto o Hito'}
-            {type === 'new_event' && 'Programar Evento en Calendario'}
+            {type === 'new_event' && (isYouthProposal ? 'Proponer Actividad de Rama en Calendario' : 'Programar Evento en Calendario')}
             {type === 'new_block' && 'Agregar Actividad al Programa del Día'}
             {type === 'new_member' && 'Incorporar Integrante a la Institución'}
             {type === 'new_folder' && 'Crear Sección o Carpeta'}
@@ -350,80 +369,122 @@ export const ItemModal = () => {
         {/* 2. Form New Event */}
         {type === 'new_event' && (
           <form onSubmit={handleCreateEvent} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* Youth Proposal Explanatory Banner */}
+            {isYouthProposal && (
+              <div style={{
+                padding: '0.85rem 1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid #f59e0b',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f59e0b', fontWeight: 700, fontSize: '0.88rem' }}>
+                  <Sparkles size={16} />
+                  <span>Propuesta de Actividad Juvenil</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#fde68a', lineHeight: 1.4 }}>
+                  Como protagonista / joven del subgrupo, tu propuesta quedará registrada en el calendario en estado <strong>Pendiente de Aprobación</strong>. Un educador o directivo adulto de la institución revisará y aprobará la actividad para confirmar su realización oficial.
+                </p>
+              </div>
+            )}
+
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Nombre del Evento *</label>
-              <input 
-                type="text" 
-                required 
-                placeholder="Ej. Campamento Anual, Salida a la Granja, Feria de Ciencias"
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Nombre del Evento o Actividad *</label>
+              <input
+                type="text"
+                required
+                placeholder="Ej. Taller de Mística Scout, Salida Fotográfica, Torneo Deportivo"
                 value={eventForm.title}
                 onChange={e => setEventForm({ ...eventForm, title: e.target.value })}
-                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
-            {/* General Group Event Checkbox */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.6rem',
-              padding: '0.65rem 0.85rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--accent-blue-light)',
-              border: '1px solid var(--accent-blue)'
-            }}>
-              <input
-                type="checkbox"
-                id="isGroupWide"
-                checked={eventForm.isGroupWide}
-                onChange={e => setEventForm({ ...eventForm, isGroupWide: e.target.checked })}
-                style={{ width: '17px', height: '17px' }}
-              />
-              <label htmlFor="isGroupWide" style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--accent-blue)', cursor: 'pointer' }}>
-                🌐 Evento General de Grupo / Escuela (Se mostrará en los calendarios de todas las ramas y grados)
-              </label>
-            </div>
+            {/* Subgroup / Branch selector or General Group Event Checkbox */}
+            {isYouthProposal ? (
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Rama / Subgrupo Destino *</label>
+                <select
+                  value={eventForm.folderId || payload?.folderId || activeFolderId || (currentOrg?.folders?.[0]?.id || '')}
+                  onChange={e => setEventForm({ ...eventForm, folderId: e.target.value })}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff', fontWeight: 600 }}
+                >
+                  {(currentOrg?.folders || []).map(f => (
+                    <option key={f.id} value={f.id}>
+                      {f.name} {f.ageRange ? `(${f.ageRange})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '0.25rem', display: 'block' }}>
+                  📍 La actividad se propondrá específicamente para el calendario de este subgrupo o rama.
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.65rem 0.85rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-blue-light)',
+                border: '1px solid var(--accent-blue)'
+              }}>
+                <input
+                  type="checkbox"
+                  id="isGroupWide"
+                  checked={eventForm.isGroupWide}
+                  onChange={e => setEventForm({ ...eventForm, isGroupWide: e.target.checked })}
+                  style={{ width: '17px', height: '17px' }}
+                />
+                <label htmlFor="isGroupWide" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', cursor: 'pointer' }}>
+                  🌐 Evento General de Grupo / Escuela (Se mostrará en los calendarios de todas las ramas y grados)
+                </label>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Fecha *</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Fecha *</label>
+                <input
                   type="date"
                   required
                   value={eventForm.date}
                   onChange={e => setEventForm({ ...eventForm, date: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Hora Inicio</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Hora Inicio</label>
+                <input
                   type="time"
                   value={eventForm.startTime}
                   onChange={e => setEventForm({ ...eventForm, startTime: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Hora Fin</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Hora Fin</label>
+                <input
                   type="time"
                   value={eventForm.endTime}
                   onChange={e => setEventForm({ ...eventForm, endTime: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Tipo de Evento</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Tipo de Evento</label>
                 <select
                   value={eventForm.type}
                   onChange={e => setEventForm({ ...eventForm, type: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 >
                   <option value="Reunión Ordinaria">Reunión Ordinaria</option>
+                  <option value="Taller / Actividad Especial">Taller / Actividad Especial</option>
                   <option value="Campamento General">Campamento General</option>
                   <option value="Salida al Aire Libre">Salida al Aire Libre</option>
                   <option value="Feria Escolar / Comunitaria">Feria Escolar / Comunitaria</option>
@@ -432,7 +493,7 @@ export const ItemModal = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Color de Identificación</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Color de Identificación</label>
                 <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
                   {['#15803d', '#0284c7', '#d97706', '#7c3aed', '#dc2626'].map(c => (
                     <button
@@ -444,7 +505,8 @@ export const ItemModal = () => {
                         height: '28px',
                         borderRadius: 'var(--radius-full)',
                         background: c,
-                        border: eventForm.badgeColor === c ? '3px solid #000' : 'none'
+                        border: eventForm.badgeColor === c ? '3px solid #ffffff' : 'none',
+                        cursor: 'pointer'
                       }}
                     />
                   ))}
@@ -453,63 +515,80 @@ export const ItemModal = () => {
             </div>
 
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Lugar</label>
-              <input 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Lugar o Espacio</label>
+              <input
                 type="text"
-                placeholder="Predio Scout, Cancha, Aula Magna..."
+                placeholder="Predio Scout, Cancha, Aula Magna, Parque..."
                 value={eventForm.location}
                 onChange={e => setEventForm({ ...eventForm, location: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Notas para los participantes</label>
-              <input 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Notas / Qué deben traer los participantes</label>
+              <input
                 type="text"
-                placeholder="Traer uniforme, autorización firmada, cantimplora..."
+                placeholder="Traer uniforme, autorización firmada, cantimplora, cuaderno..."
                 value={eventForm.notes}
                 onChange={e => setEventForm({ ...eventForm, notes: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
-            <div style={{
-              background: 'rgba(2, 132, 199, 0.08)',
-              border: '1px dashed #0284c7',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
-                <Lock size={13} style={{ color: '#0284c7' }} />
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  Enlace de Drive / Planillas (Exclusivo Adultos)
-                </label>
+            {/* Exclusive link for adults only */}
+            {!isYouthProposal && (
+              <div style={{
+                background: 'rgba(2, 132, 199, 0.08)',
+                border: '1px dashed #0284c7',
+                borderRadius: 'var(--radius-sm)',
+                padding: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                  <Lock size={13} style={{ color: '#0284c7' }} />
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>
+                    Enlace de Drive / Planillas (Exclusivo Adultos)
+                  </label>
+                </div>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/drive/folders/... (Para cargar actividades)"
+                  value={eventForm.adultPrivateLink || ''}
+                  onChange={e => setEventForm({ ...eventForm, adultPrivateLink: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'block', marginTop: '0.25rem' }}>
+                  🔒 Solo visible para educadores, dirigentes y autoridades del grupo/escuela.
+                </span>
               </div>
-              <input 
-                type="url"
-                placeholder="https://drive.google.com/drive/folders/... (Para cargar actividades)"
-                value={eventForm.adultPrivateLink || ''}
-                onChange={e => setEventForm({ ...eventForm, adultPrivateLink: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
-                🔒 Solo visible para educadores, dirigentes y autoridades del grupo/escuela.
-              </span>
-            </div>
+            )}
 
             <button
               type="submit"
               style={{
                 marginTop: '0.5rem',
-                padding: '0.65rem',
-                background: 'var(--primary)',
-                color: '#fff',
+                padding: '0.7rem',
+                background: isYouthProposal ? '#d97706' : 'var(--primary)',
+                color: '#ffffff',
                 borderRadius: 'var(--radius-md)',
-                fontWeight: 700
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                boxShadow: 'var(--shadow-sm)'
               }}
             >
-              Publicar en Calendario
+              {isYouthProposal ? (
+                <>
+                  <Sparkles size={18} />
+                  <span>Enviar Actividad para Aprobación Adulta</span>
+                </>
+              ) : (
+                'Publicar en Calendario'
+              )}
             </button>
           </form>
         )}
@@ -518,27 +597,27 @@ export const ItemModal = () => {
         {type === 'new_folder' && (
           <form onSubmit={handleCreateFolder} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Crea una nueva rama scout o grado escolar dentro de <strong>{currentOrg?.name || 'la institución activa'}</strong>.
+              Crea una nueva rama scout o grado escolar dentro de <strong style={{ color: '#ffffff' }}>{currentOrg?.name || 'la institución activa'}</strong>.
             </p>
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Nombre de la Sección o Carpeta / Rama *</label>
-              <input 
-                type="text" 
-                required 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Nombre de la Sección o Carpeta / Rama *</label>
+              <input
+                type="text"
+                required
                 placeholder={currentOrg?.type === 'scout' ? "Ej. 🐺 Manada de Lobatos, ⚜️ Unidad Scout, 🏕️ Caminantes..." : "Ej. 🔬 5° Año Ciencias Naturales, 📚 Primaria 3er Grado..."}
                 value={folderForm.name}
                 onChange={e => setFolderForm({ ...folderForm, name: e.target.value })}
-                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Rango de Edad / Ciclo</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Rango de Edad / Ciclo</label>
                 <select
                   value={folderForm.ageRange}
                   onChange={e => setFolderForm({ ...folderForm, ageRange: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', fontSize: '0.82rem' }}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff', fontSize: '0.82rem' }}
                 >
                   <option value="Todas las edades">Todas las edades / General</option>
                   <option value="5 a 7 años">5 a 7 años (Castores / Inicial)</option>
@@ -625,22 +704,22 @@ export const ItemModal = () => {
           <form onSubmit={handleCreateMember} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Nombre Completo *</label>
-                <input 
-                  type="text" 
-                  required 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
                   placeholder="Ej. Roberto Sánchez"
                   value={memberForm.name}
                   onChange={e => setMemberForm({ ...memberForm, name: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Rol en la Institución *</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Rol en la Institución *</label>
                 <select
                   value={memberForm.role}
                   onChange={e => setMemberForm({ ...memberForm, role: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 >
                   <option value="educator">⚜️ Educador / Docente</option>
                   <option value="admin">🏛️ Autoridad / Directivo</option>
@@ -652,23 +731,23 @@ export const ItemModal = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Correo Electrónico</label>
-                <input 
-                  type="email" 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Correo Electrónico</label>
+                <input
+                  type="email"
                   placeholder="correo@ejemplo.com"
                   value={memberForm.email}
                   onChange={e => setMemberForm({ ...memberForm, email: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Teléfono de Contacto</label>
-                <input 
-                  type="text" 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Teléfono de Contacto</label>
+                <input
+                  type="text"
                   placeholder="+54 9 11 ..."
                   value={memberForm.phone}
                   onChange={e => setMemberForm({ ...memberForm, phone: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
             </div>
@@ -717,71 +796,71 @@ export const ItemModal = () => {
           <form onSubmit={handleCreateBlock} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Horario *</label>
-                <input 
-                  type="text" 
-                  required 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Horario *</label>
+                <input
+                  type="text"
+                  required
                   placeholder="14:00 - 15:00"
                   value={blockForm.time}
                   onChange={e => setBlockForm({ ...blockForm, time: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Nombre de la Actividad *</label>
-                <input 
-                  type="text" 
-                  required 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Nombre de la Actividad *</label>
+                <input
+                  type="text"
+                  required
                   placeholder="Ej. Amarres de Pionerismo, Taller de Robótica"
                   value={blockForm.title}
                   onChange={e => setBlockForm({ ...blockForm, title: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Objetivo Pedagógico / Finalidad</label>
-              <textarea 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Objetivo Pedagógico / Finalidad</label>
+              <textarea
                 rows={2}
                 placeholder="¿Qué habilidad o valor se busca desarrollar con esta actividad?"
                 value={blockForm.objective}
                 onChange={e => setBlockForm({ ...blockForm, objective: e.target.value })}
-                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Responsable de Conducir</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Responsable de Conducir</label>
+                <input
                   type="text"
                   placeholder="Docente titular, Guía de Patrulla..."
                   value={blockForm.responsible}
                   onChange={e => setBlockForm({ ...blockForm, responsible: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Lugar / Rincón</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Lugar / Rincón</label>
+                <input
                   type="text"
                   placeholder="Cancha, Aula 3, Bosquecillo..."
                   value={blockForm.location}
                   onChange={e => setBlockForm({ ...blockForm, location: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Materiales Necesarios</label>
-              <input 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Materiales Necesarios</label>
+              <input
                 type="text"
                 placeholder="Cuerdas, cartulinas, pelota, proyector..."
                 value={blockForm.materials}
                 onChange={e => setBlockForm({ ...blockForm, materials: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
@@ -792,17 +871,17 @@ export const ItemModal = () => {
               padding: '0.75rem'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
-                <Lock size={13} style={{ color: '#d97706' }} />
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                <Lock size={13} style={{ color: '#fbbf24' }} />
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ffffff' }}>
                   Enlace a Ficha Técnica / Instructivo de Realización (Solo Adultos)
                 </label>
               </div>
-              <input 
+              <input
                 type="url"
                 placeholder="https://docs.google.com/... (Reglas pedagógicas, pasos, dinámica)"
                 value={blockForm.adultGuideUrl || ''}
                 onChange={e => setBlockForm({ ...blockForm, adultGuideUrl: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
                 🔒 Solo visible para educadores, dirigentes y adultos responsables.
@@ -829,45 +908,45 @@ export const ItemModal = () => {
         {type === 'new_project' && (
           <form onSubmit={handleCreateProject} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Título del Proyecto *</label>
-              <input 
-                type="text" 
-                required 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Título del Proyecto *</label>
+              <input
+                type="text"
+                required
                 placeholder="Ej. Campamento Anual, Huerta Comunitaria, Feria de Ciencias"
                 value={projectForm.title}
                 onChange={e => setProjectForm({ ...projectForm, title: e.target.value })}
-                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Descripción y Objetivos</label>
-              <textarea 
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Descripción y Objetivos</label>
+              <textarea
                 rows={2}
                 placeholder="Resumen del proyecto y metas formativas..."
                 value={projectForm.description}
                 onChange={e => setProjectForm({ ...projectForm, description: e.target.value })}
-                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Fecha Inicio</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Fecha Inicio</label>
+                <input
                   type="date"
                   value={projectForm.startDate}
                   onChange={e => setProjectForm({ ...projectForm, startDate: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Fecha Límite</label>
-                <input 
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>Fecha Límite</label>
+                <input
                   type="date"
                   value={projectForm.endDate}
                   onChange={e => setProjectForm({ ...projectForm, endDate: e.target.value })}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#ffffff' }}
                 />
               </div>
             </div>
@@ -902,8 +981,8 @@ export const ItemModal = () => {
                 width: '64px',
                 height: '64px',
                 borderRadius: 'var(--radius-full)',
-                background: 'rgba(21, 128, 61, 0.15)',
-                color: '#16a34a',
+                background: 'rgba(34, 197, 94, 0.18)',
+                color: '#4ade80',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -913,11 +992,15 @@ export const ItemModal = () => {
               </div>
 
               <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
-                  ¡Solicitud de Fundación Registrada con Éxito!
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.35rem' }}>
+                  {createdOrgSummary?.autoApproved
+                    ? '¡Institución / Grupo Cargado y Activado con Éxito!'
+                    : '¡Solicitud de Institución Registrada con Éxito!'}
                 </h3>
                 <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.45 }}>
-                  Todos los adultos registrados pueden iniciar la creación de una institución o grupo. Los datos han sido guardados para la supervisión oficial.
+                  {createdOrgSummary?.autoApproved
+                    ? 'Como eres Administrador, la institución ha sido habilitada inmediatamente y ya se encuentra activa en la plataforma.'
+                    : 'Tu solicitud ha sido cargada y permanece pendiente de aprobación hasta que un Administrador la revise y habilite oficialmente.'}
                 </p>
               </div>
 
@@ -929,18 +1012,18 @@ export const ItemModal = () => {
                 gap: '0.5rem',
                 padding: '0.45rem 1rem',
                 borderRadius: 'var(--radius-full)',
-                background: createdOrgSummary?.autoApproved ? 'rgba(21, 128, 61, 0.15)' : 'rgba(217, 119, 6, 0.15)',
-                color: createdOrgSummary?.autoApproved ? '#15803d' : '#d97706',
-                border: createdOrgSummary?.autoApproved ? '1px solid #15803d' : '1px solid #d97706',
+                background: createdOrgSummary?.autoApproved ? 'rgba(34, 197, 94, 0.16)' : 'rgba(245, 158, 11, 0.16)',
+                color: createdOrgSummary?.autoApproved ? '#4ade80' : '#fbbf24',
+                border: createdOrgSummary?.autoApproved ? '1px solid rgba(74, 222, 128, 0.45)' : '1px solid rgba(251, 191, 36, 0.45)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 margin: '0 auto'
               }}>
                 {createdOrgSummary?.autoApproved ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                 <span>
-                  {createdOrgSummary?.autoApproved 
-                    ? '✅ Habilitada y Activada Inmediatamente' 
-                    : '⏳ Pendiente de Aprobación por Autoridades & Super Admin'}
+                  {createdOrgSummary?.autoApproved
+                    ? '✅ Habilitada y Activada Inmediatamente por Administrador'
+                    : '⏳ Pendiente de Aprobación por un Administrador'}
                 </span>
               </div>
 
@@ -958,11 +1041,11 @@ export const ItemModal = () => {
                   fontSize: '0.82rem'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                    <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.95rem' }}>
                       {createdOrgSummary.type === 'scout' ? '⚜️ ' : '🏫 '}
                       {createdOrgSummary.name}
                     </span>
-                    <span className="badge badge-info" style={{ fontSize: '0.74rem' }}>
+                    <span className="badge badge-info" style={{ fontSize: '0.74rem', color: '#38bdf8' }}>
                       CUE/Reg: {createdOrgSummary.cue}
                     </span>
                   </div>
@@ -970,14 +1053,14 @@ export const ItemModal = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', marginTop: '0.25rem' }}>
                     <div>
                       <strong style={{ color: 'var(--text-muted)' }}>📍 Ubicación:</strong>
-                      <div style={{ color: 'var(--text-main)' }}>
+                      <div style={{ color: '#ffffff' }}>
                         {createdOrgSummary.address ? `${createdOrgSummary.address}, ` : ''}
                         {createdOrgSummary.city}, {createdOrgSummary.department}, {createdOrgSummary.province}
                       </div>
                     </div>
                     <div>
                       <strong style={{ color: 'var(--text-muted)' }}>👤 Adulto Solicitante:</strong>
-                      <div style={{ color: 'var(--text-main)' }}>
+                      <div style={{ color: '#ffffff' }}>
                         {createdOrgSummary.applicantName} ({createdOrgSummary.applicantRole})
                       </div>
                       <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
@@ -993,9 +1076,9 @@ export const ItemModal = () => {
                       gap: '0.4rem',
                       padding: '0.45rem 0.65rem',
                       borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(217, 119, 6, 0.1)',
-                      border: '1px dashed #d97706',
-                      color: '#b45309',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px dashed #fbbf24',
+                      color: '#fbbf24',
                       fontSize: '0.78rem',
                       marginTop: '0.25rem'
                     }}>
@@ -1006,41 +1089,69 @@ export const ItemModal = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={close}
-                  style={{
-                    padding: '0.65rem 1.5rem',
-                    background: 'var(--primary)',
-                    color: '#fff',
-                    borderRadius: 'var(--radius-md)',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Entendido y Continuar
-                </button>
-                {isSuperAdmin && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                {createdOrgSummary?.autoApproved ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (createdOrgSummary?.id) {
+                        if (switchUserOrg) switchUserOrg(createdOrgSummary.id);
+                        else if (selectOrg) selectOrg(createdOrgSummary.id);
+                      }
+                      if (setCurrentTab) setCurrentTab('folders');
+                      close();
+                    }}
+                    style={{
+                      padding: '0.65rem 1.5rem',
+                      background: 'var(--primary)',
+                      color: '#fff',
+                      borderRadius: 'var(--radius-md)',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Ir a la Institución Creada Ahora
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
                       close();
-                      if (setCurrentTab) setCurrentTab('superadmin');
+                      if (setInstitutionExplorerOpen) setInstitutionExplorerOpen(true);
+                    }}
+                    style={{
+                      padding: '0.65rem 1.5rem',
+                      background: 'var(--primary)',
+                      color: '#fff',
+                      borderRadius: 'var(--radius-md)',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Ver Solicitud en Instituciones
+                  </button>
+                )}
+                {isCreatorAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      if (setCurrentTab) setCurrentTab(isSuperAdmin ? 'superadmin' : 'admin_members');
                     }}
                     style={{
                       padding: '0.65rem 1.25rem',
                       background: 'var(--bg-input)',
                       border: '1px solid var(--border-color)',
-                      color: 'var(--text-main)',
+                      color: '#ffffff',
                       borderRadius: 'var(--radius-md)',
                       fontWeight: 600,
                       fontSize: '0.88rem',
                       cursor: 'pointer'
                     }}
                   >
-                    👑 Ver en Panel Super Admin
+                    👑 Ver en Panel de Administración
                   </button>
                 )}
               </div>
@@ -1054,14 +1165,22 @@ export const ItemModal = () => {
                 gap: '0.5rem',
                 padding: '0.65rem 0.85rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'rgba(21, 128, 61, 0.08)',
-                border: '1px solid rgba(21, 128, 61, 0.25)',
+                background: isCreatorAdmin ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                border: isCreatorAdmin ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(251, 191, 36, 0.35)',
                 fontSize: '0.78rem',
-                color: 'var(--text-main)'
+                color: '#ffffff'
               }}>
-                <Sparkles size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                <Sparkles size={16} style={{ color: isCreatorAdmin ? '#4ade80' : '#fbbf24', flexShrink: 0 }} />
                 <span>
-                  <strong>Habilitación Comunitaria:</strong> Todos los adultos educadores o directivos pueden registrar una nueva institución o grupo completando sus datos geográficos y personales. Luego pasarán a supervisión y aprobación oficial.
+                  {isCreatorAdmin ? (
+                    <>
+                      <strong style={{ color: '#4ade80' }}>Alta Directa por Administrador:</strong> Al tener permisos de Administrador, la institución que cargues quedará aprobada y activa de inmediato.
+                    </>
+                  ) : (
+                    <>
+                      <strong style={{ color: '#fbbf24' }}>Registro Sujeto a Aprobación:</strong> Completa los datos de tu grupo o colegio. La institución quedará <strong>pendiente de aprobación</strong> hasta que un Administrador la revise y habilite.
+                    </>
+                  )}
                 </span>
               </div>
 
@@ -1075,8 +1194,8 @@ export const ItemModal = () => {
                 flexDirection: 'column',
                 gap: '0.75rem'
               }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Building2 size={16} style={{ color: 'var(--primary)' }} />
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Building2 size={16} style={{ color: '#4ade80' }} />
                   <span>1. Identidad Institucional</span>
                 </div>
 
@@ -1092,9 +1211,9 @@ export const ItemModal = () => {
                       gap: '0.45rem',
                       padding: '0.6rem',
                       borderRadius: 'var(--radius-sm)',
-                      background: orgForm.type === 'scout' ? 'rgba(21, 128, 61, 0.15)' : 'var(--bg-surface)',
-                      border: orgForm.type === 'scout' ? '2px solid #15803d' : '1px solid var(--border-color)',
-                      color: orgForm.type === 'scout' ? '#15803d' : 'var(--text-main)',
+                      background: orgForm.type === 'scout' ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-surface)',
+                      border: orgForm.type === 'scout' ? '2px solid #22c55e' : '1px solid var(--border-color)',
+                      color: orgForm.type === 'scout' ? '#4ade80' : '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.84rem',
                       cursor: 'pointer'
@@ -1114,9 +1233,9 @@ export const ItemModal = () => {
                       gap: '0.45rem',
                       padding: '0.6rem',
                       borderRadius: 'var(--radius-sm)',
-                      background: orgForm.type === 'school' ? 'rgba(2, 132, 199, 0.15)' : 'var(--bg-surface)',
-                      border: orgForm.type === 'school' ? '2px solid #0284c7' : '1px solid var(--border-color)',
-                      color: orgForm.type === 'school' ? '#0284c7' : 'var(--text-main)',
+                      background: orgForm.type === 'school' ? 'rgba(56, 189, 248, 0.2)' : 'var(--bg-surface)',
+                      border: orgForm.type === 'school' ? '2px solid #38bdf8' : '1px solid var(--border-color)',
+                      color: orgForm.type === 'school' ? '#38bdf8' : '#ffffff',
                       fontWeight: 700,
                       fontSize: '0.84rem',
                       cursor: 'pointer'
@@ -1129,7 +1248,7 @@ export const ItemModal = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.65rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Nombre de la Institución / Grupo *
                     </label>
                     <input
@@ -1138,11 +1257,11 @@ export const ItemModal = () => {
                       placeholder={orgForm.type === 'scout' ? "Ej: Grupo Scout San Martín de Tours N° 14" : "Ej: Colegio Belgrano Día"}
                       value={orgForm.name}
                       onChange={e => setOrgForm({ ...orgForm, name: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       N° Registro / CUE *
                     </label>
                     <input
@@ -1151,13 +1270,13 @@ export const ItemModal = () => {
                       placeholder="Ej: 0601234-00 o N° 14"
                       value={orgForm.cue}
                       onChange={e => setOrgForm({ ...orgForm, cue: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                     Insignia, Lema o Subtítulo Institucional
                   </label>
                   <input
@@ -1165,7 +1284,7 @@ export const ItemModal = () => {
                     placeholder="Ej: Distrito 3 - Zona 12 / Nivel Primario y Secundario"
                     value={orgForm.badge}
                     onChange={e => setOrgForm({ ...orgForm, badge: e.target.value })}
-                    style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                   />
                 </div>
               </div>
@@ -1180,26 +1299,26 @@ export const ItemModal = () => {
                 flexDirection: 'column',
                 gap: '0.75rem'
               }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <MapPin size={16} style={{ color: '#16a34a' }} />
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <MapPin size={16} style={{ color: '#4ade80' }} />
                   <span>2. Ubicación Geográfica Oficial</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       País
                     </label>
                     <input
                       type="text"
                       value={orgForm.country}
                       onChange={e => setOrgForm({ ...orgForm, country: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Provincia *
                     </label>
                     <input
@@ -1208,12 +1327,12 @@ export const ItemModal = () => {
                       placeholder="Ej: Buenos Aires, CABA, Córdoba"
                       value={orgForm.province}
                       onChange={e => setOrgForm({ ...orgForm, province: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Partido / Departamento *
                     </label>
                     <input
@@ -1222,12 +1341,12 @@ export const ItemModal = () => {
                       placeholder="Ej: La Matanza, Rosario, San Isidro"
                       value={orgForm.department}
                       onChange={e => setOrgForm({ ...orgForm, department: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Localidad / Ciudad *
                     </label>
                     <input
@@ -1236,12 +1355,12 @@ export const ItemModal = () => {
                       placeholder="Ej: San Justo, Martínez, Santa Fe"
                       value={orgForm.city}
                       onChange={e => setOrgForm({ ...orgForm, city: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Calle y Número (Dirección de Sede) *
                     </label>
                     <input
@@ -1250,14 +1369,14 @@ export const ItemModal = () => {
                       placeholder="Ej: Av. San Martín 1540"
                       value={orgForm.address}
                       onChange={e => setOrgForm({ ...orgForm, address: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Email Oficial Institucional
                     </label>
                     <input
@@ -1265,11 +1384,11 @@ export const ItemModal = () => {
                       placeholder="contacto@institucion.org"
                       value={orgForm.officialEmail}
                       onChange={e => setOrgForm({ ...orgForm, officialEmail: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                       Teléfono Oficial de Sede
                     </label>
                     <input
@@ -1277,7 +1396,7 @@ export const ItemModal = () => {
                       placeholder="+54 11 ..."
                       value={orgForm.officialPhone}
                       onChange={e => setOrgForm({ ...orgForm, officialPhone: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                 </div>
@@ -1288,46 +1407,76 @@ export const ItemModal = () => {
                 background: 'var(--bg-input)',
                 border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-md)',
-                padding: '0.85rem 1rem',
+                padding: '0.9rem 1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.75rem'
               }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <UserCheck size={16} style={{ color: 'var(--secondary)' }} />
-                  <span>3. Datos del Adulto Solicitante & Responsable</span>
+                  <span>3. Datos de Quien Carga la Institución (Solicitante)</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.65rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                      Nombre y Apellido *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={orgForm.applicantName}
-                      onChange={e => setOrgForm({ ...orgForm, applicantName: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
-                    />
-                  </div>
+                <div style={{
+                  fontSize: '0.76rem',
+                  color: '#38bdf8',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  padding: '0.55rem 0.8rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  lineHeight: 1.45
+                }}>
+                  ℹ️ <strong>Aclaración:</strong> Quien realiza la carga no necesariamente es la autoridad máxima (directivo o jefe de grupo). Completa aquí tu documento y al lado el cargo que ejerces; la autoridad formal puede registrarse o regularizarse posteriormente.
+                </div>
 
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                    Nombre y Apellido de Quien Carga *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tu nombre completo"
+                    value={orgForm.applicantName}
+                    onChange={e => setOrgForm({ ...orgForm, applicantName: e.target.value })}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
+                  />
+                </div>
+
+                {/* Documento y al lado Cargo en la institución o grupo */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                      DNI del Solicitante *
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Documento (DNI / Cédula) *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej: 34123456"
+                      placeholder="Ej: 34.123.456"
                       value={orgForm.applicantDni}
                       onChange={e => setOrgForm({ ...orgForm, applicantDni: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Cargo en la Institución o Grupo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej: Educador, Docente, Secretario, Colaborador, Directivo..."
+                      value={orgForm.applicantRole}
+                      onChange={e => setOrgForm({ ...orgForm, applicantRole: e.target.value })}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                       Teléfono de Contacto *
                     </label>
                     <input
@@ -1336,34 +1485,21 @@ export const ItemModal = () => {
                       placeholder="+54 9 11 ..."
                       value={orgForm.applicantPhone}
                       onChange={e => setOrgForm({ ...orgForm, applicantPhone: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                       Correo Electrónico *
                     </label>
                     <input
                       type="email"
                       required
+                      placeholder="tucorreo@ejemplo.com"
                       value={orgForm.applicantEmail}
                       onChange={e => setOrgForm({ ...orgForm, applicantEmail: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
-                    />
-                  </div>
-
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                      Cargo / Rol en la Institución *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej: Educador Adulto Fundador / Jefe de Grupo / Maestro de Grado / Directivo"
-                      value={orgForm.applicantRole}
-                      onChange={e => setOrgForm({ ...orgForm, applicantRole: e.target.value })}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                      style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                     />
                   </div>
                 </div>
@@ -1379,13 +1515,13 @@ export const ItemModal = () => {
                 flexDirection: 'column',
                 gap: '0.65rem'
               }}>
-                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <ShieldCheck size={16} style={{ color: 'var(--accent-purple)' }} />
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldCheck size={16} style={{ color: '#a78bfa' }} />
                   <span>4. Supervisión y Propósito</span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.2rem' }}>
                     Descripción o Propósito Pedagógico
                   </label>
                   <textarea
@@ -1393,7 +1529,7 @@ export const ItemModal = () => {
                     placeholder="Misión, historia o proyecto formativo de la institución..."
                     value={orgForm.description}
                     onChange={e => setOrgForm({ ...orgForm, description: e.target.value })}
-                    style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.82rem' }}
+                    style={{ width: '100%', padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', fontSize: '0.84rem', color: '#ffffff' }}
                   />
                 </div>
 
@@ -1403,8 +1539,8 @@ export const ItemModal = () => {
                   gap: '0.5rem',
                   padding: '0.55rem 0.75rem',
                   borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(217, 119, 6, 0.08)',
-                  border: '1px solid rgba(217, 119, 6, 0.25)',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
                   cursor: 'pointer'
                 }}>
                   <input
@@ -1413,20 +1549,20 @@ export const ItemModal = () => {
                     onChange={e => setOrgForm({ ...orgForm, needsAuthorityAssignment: e.target.checked })}
                     style={{ marginTop: '3px' }}
                   />
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-main)' }}>
-                    <strong>Solicitar Asignación de Autoridad Supervisora:</strong> Marcar si no se cuenta aún con una autoridad distrital/regional designada. Se avisará al Super Administrador para evaluar y coordinar el curso correspondiente.
+                  <div style={{ fontSize: '0.78rem', color: '#ffffff' }}>
+                    <strong style={{ color: '#fbbf24' }}>Solicitar Asignación de Autoridad Supervisora:</strong> Marcar si no se cuenta aún con una autoridad distrital/regional designada. Se avisará al Super Administrador para evaluar y coordinar el curso correspondiente.
                   </div>
                 </label>
 
-                {isSuperAdmin && (
+                {isCreatorAdmin && (
                   <label style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '0.5rem',
                     padding: '0.55rem 0.75rem',
                     borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(99, 102, 241, 0.08)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    border: '1px solid rgba(129, 140, 248, 0.35)',
                     cursor: 'pointer'
                   }}>
                     <input
@@ -1435,11 +1571,11 @@ export const ItemModal = () => {
                       onChange={e => setOrgForm({ ...orgForm, autoApproveIfSuperAdmin: e.target.checked })}
                       style={{ marginTop: '3px' }}
                     />
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-main)' }}>
-                      <strong style={{ color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <Crown size={13} /> Habilitar y Activar Inmediatamente:
-                      </strong> 
-                      Como Super Administrador, podés dar de alta la institución de forma directa sin dejarla en estado pendiente de aprobación.
+                    <div style={{ fontSize: '0.78rem', color: '#ffffff' }}>
+                      <strong style={{ color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Crown size={13} /> Habilitar y Activar Inmediatamente (Permiso de Administrador):
+                      </strong>
+                      Como Administrador, podés dar de alta la institución de forma directa sin dejarla en estado pendiente de aprobación.
                     </div>
                   </label>
                 )}
@@ -1454,7 +1590,7 @@ export const ItemModal = () => {
                     padding: '0.65rem 1.15rem',
                     background: 'var(--bg-input)',
                     border: '1px solid var(--border-color)',
-                    color: 'var(--text-main)',
+                    color: '#ffffff',
                     borderRadius: 'var(--radius-md)',
                     fontWeight: 600,
                     fontSize: '0.86rem',
@@ -1480,7 +1616,11 @@ export const ItemModal = () => {
                   }}
                 >
                   <Building2 size={16} />
-                  <span>Registrar Solicitud de Fundación</span>
+                  <span>
+                    {isCreatorAdmin && orgForm.autoApproveIfSuperAdmin
+                      ? 'Cargar y Habilitar Institución / Grupo'
+                      : 'Enviar Solicitud de Institución (Pendiente de Aprobación)'}
+                  </span>
                 </button>
               </div>
             </form>

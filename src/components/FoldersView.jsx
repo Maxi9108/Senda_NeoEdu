@@ -1,14 +1,14 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { 
-  FolderPlus, 
-  FolderOpen, 
-  Calendar, 
-  Rocket, 
-  Users, 
-  ArrowRight, 
-  Building2, 
-  Compass, 
+import {
+  FolderPlus,
+  FolderOpen,
+  Calendar,
+  Rocket,
+  Users,
+  ArrowRight,
+  Building2,
+  Compass,
   GraduationCap,
   Sparkles,
   Lock,
@@ -19,18 +19,19 @@ import {
 } from 'lucide-react';
 
 export const FoldersView = () => {
-  const { 
-    currentOrg, 
-    data, 
-    selectFolder, 
-    setCurrentTab, 
+  const {
+    currentOrg,
+    data,
+    selectFolder,
+    setCurrentTab,
     setModalConfig,
     canEdit,
     isAdmin,
     isAdult,
     canAccessFolder,
     setPrivateAccessModal,
-    setOrgCustomizationModalOpen
+    setOrgCustomizationModalOpen,
+    setInstitutionExplorerOpen
   } = useApp();
 
   const getFolderStats = (folderId) => {
@@ -77,49 +78,49 @@ export const FoldersView = () => {
           </p>
         </div>
 
-        {(canEdit || isAdult) && (
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {canEdit && (
-              <button
-                onClick={() => setModalConfig({ isOpen: true, type: 'new_folder' })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 1.15rem',
-                  background: 'var(--primary)',
-                  color: '#fff',
-                  borderRadius: 'var(--radius-md)',
-                  fontWeight: 700,
-                  fontSize: '0.9rem',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-              >
-                <FolderPlus size={18} />
-                <span>Crear Rama / Grado</span>
-              </button>
-            )}
-
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {canEdit && (
             <button
-              onClick={() => setModalConfig({ isOpen: true, type: 'new_org' })}
+              onClick={() => setModalConfig({ isOpen: true, type: 'new_folder' })}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: '0.65rem 1rem',
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
+                padding: '0.65rem 1.15rem',
+                background: 'var(--primary)',
+                color: '#fff',
                 borderRadius: 'var(--radius-md)',
-                fontWeight: 600,
-                fontSize: '0.9rem'
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                boxShadow: 'var(--shadow-sm)',
+                cursor: 'pointer'
               }}
             >
-              <Building2 size={17} style={{ color: 'var(--secondary)' }} />
-              <span>Nuevo Grupo / Escuela</span>
+              <FolderPlus size={18} />
+              <span>Crear Rama / Grado</span>
             </button>
-          </div>
-        )}
+          )}
+
+          <button
+            onClick={() => setModalConfig({ isOpen: true, type: 'new_org' })}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.65rem 1rem',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-color)',
+              color: '#ffffff',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              cursor: 'pointer'
+            }}
+          >
+            <Building2 size={17} style={{ color: 'var(--secondary)' }} />
+            <span>Cargar Nuevo Grupo / Escuela</span>
+          </button>
+        </div>
       </div>
 
       {/* Folders Grid */}
@@ -159,7 +160,7 @@ export const FoldersView = () => {
                   justifyContent: 'space-between',
                   borderRadius: 'var(--radius-lg)',
                   border: `1px solid ${isRestricted ? 'rgba(217, 119, 6, 0.3)' : 'var(--border-color)'}`,
-                  background: folder.bgImage 
+                  background: folder.bgImage
                     ? `linear-gradient(rgba(18, 28, 46, 0.85), rgba(18, 28, 46, 0.95)), url(${folder.bgImage}) center/cover`
                     : (folder.bannerBg || 'var(--bg-card)'),
                   borderTop: `4px solid ${folderColor}`
@@ -210,8 +211,8 @@ export const FoldersView = () => {
                   </h3>
 
                   <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                    {folder.isPrivateAdultOnly 
-                      ? 'Espacio reservado para el Consejo de Dirigentes y Cuerpo Docente.' 
+                    {folder.isPrivateAdultOnly
+                      ? 'Espacio reservado para el Consejo de Dirigentes y Cuerpo Docente.'
                       : 'Actividades, materiales compartidos, fotos y grupo oficial de WhatsApp.'}
                   </p>
                 </div>

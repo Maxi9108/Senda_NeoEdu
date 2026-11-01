@@ -271,24 +271,24 @@ export const Navbar = () => {
           display: 'flex',
           alignItems: 'center',
           background: 'var(--bg-input)',
-          padding: '0.16rem 0.3rem',
+          padding: '0.16rem 0.35rem',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--border-color)',
-          maxWidth: '125px',
+          maxWidth: '175px',
           gap: '0.2rem'
         }}>
           <select 
             value={activeOrgId} 
             onChange={(e) => (switchUserOrg ? switchUserOrg(e.target.value) : selectOrg(e.target.value))}
             style={{
-              background: 'transparent',
+              backgroundColor: 'var(--bg-input)',
               border: 'none',
               fontWeight: 700,
-              color: 'var(--text-main)',
+              color: '#ffffff',
               cursor: 'pointer',
               outline: 'none',
-              fontSize: '0.74rem',
-              maxWidth: '115px',
+              fontSize: '0.76rem',
+              maxWidth: '160px',
               textOverflow: 'ellipsis',
               overflow: 'hidden',
               whiteSpace: 'nowrap'
@@ -296,7 +296,7 @@ export const Navbar = () => {
             title={availableUserOrgs?.length > 1 ? `Tienes acceso a ${availableUserOrgs.length} instituciones` : 'Institución activa'}
           >
             {(availableUserOrgs && availableUserOrgs.length > 0 ? availableUserOrgs : data.organizations).map(org => (
-              <option key={org.id} value={org.id}>
+              <option key={org.id} value={org.id} style={{ backgroundColor: '#0e1524', color: '#ffffff' }}>
                 {org.type === 'scout' ? '⚜️ ' : '🏫 '} {org.name}
               </option>
             ))}

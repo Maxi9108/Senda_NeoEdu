@@ -26,7 +26,8 @@ import {
   Users,
   FileText,
   ExternalLink,
-  PlusCircle
+  PlusCircle,
+  AlertCircle
 } from 'lucide-react';
 
 export const CalendarView = () => {
@@ -41,11 +42,17 @@ export const CalendarView = () => {
     searchQuery,
     canEdit,
     currentUserRole,
+    effectiveRole,
     calendarBranchFilters,
     setCalendarBranchFilters,
     togglePackingItem,
     addActivityToEvent,
-    deleteActivityFromEvent
+    deleteActivityFromEvent,
+    approveCalendarEvent,
+    rejectCalendarEvent,
+    canYouthSubmitActivities,
+    isAdultInInstitution,
+    currentUser
   } = useApp();
 
   const [currentDate, setCurrentDate] = useState(new Date(2026, 9, 24)); // October 2026
@@ -447,9 +454,24 @@ export const CalendarView = () => {
     setCalendarBranchFilters(updated);
   };
 
+  // Actividades propuestas por niños/jóvenes pendientes de aprobación por un adulto
+  const pendingYouthEvents = data.calendarEvents.filter(ev => 
+    ev.orgId === currentOrg.id && 
+    (ev.approvalStatus === 'pending' || ev.isApproved === false)
+  );
+
   // FILTERING LOGIC WITH MULTI-COLOR BRANCH TILDE SELECTION:
   const filteredEvents = data.calendarEvents.filter(ev => {
     if (ev.orgId !== currentOrg.id) return false;
+
+    // Aprobación: Si está pendiente, sólo visible para adultos o para el joven que lo propuso
+    const isPending = ev.approvalStatus === 'pending' || ev.isApproved === false;
+    if (isPending) {
+      const isMyProposal = currentUser && (ev.proposedBy?.id === currentUser.id || ev.proposedBy?.name === currentUser.name);
+      if (!isAdultInInstitution && !canEdit && !isMyProposal) {
+        return false;
+      }
+    }
 
     // Check if branch is enabled by tilde checkbox
     const eventFolderId = ev.folderId || 'all';
@@ -538,12 +560,17 @@ export const CalendarView = () => {
                 Ver Todo el Calendario Grupal
               </button>
             )}
-            {!canEdit && (
+            {!canEdit && canYouthSubmitActivities(activeFolderId) ? (
+              <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.16)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.4)', fontWeight: 700 }}>
+                <Sparkles size={12} />
+                Autorizado/a a Cargar Actividades (Sujetas a Aprobación)
+              </span>
+            ) : !canEdit ? (
               <span className="badge" style={{ background: 'var(--bg-input)', color: 'var(--text-muted)' }}>
                 <Eye size={12} />
                 Solo Consulta (Lectura)
               </span>
-            )}
+            ) : null}
           </div>
           <h1 style={{ fontSize: '1.75rem', color: 'var(--text-main)' }}>
             {activeFolderId !== 'all' && activeFolder 
@@ -655,8 +682,145 @@ export const CalendarView = () => {
               <span>Nuevo Evento</span>
             </button>
           )}
+
+          {/* Botón para niños/jóvenes autorizados a proponer/cargar actividades en el calendario */}
+          {!canEdit && canYouthSubmitActivities(activeFolderId) && (
+            <button
+              onClick={() => setModalConfig({ isOpen: true, type: 'new_event', isYouthProposal: true })}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem 1.15rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)',
+                cursor: 'pointer'
+              }}
+              title="Cargar propuesta de actividad en el calendario de tu subgrupo (requiere aprobación por un adulto)"
+            >
+              <Sparkles size={18} />
+              <span>+ Proponer Actividad de Rama</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* PANEL DE REVISIÓN Y APROBACIÓN ADULTA (VISIBLE PARA ADULTOS CUANDO HAY PROPUESTAS JUVENILES PENDIENTES) */}
+      {(isAdultInInstitution || canEdit) && pendingYouthEvents.length > 0 && (
+        <div className="glass-panel" style={{
+          padding: '1.15rem 1.35rem',
+          borderRadius: 'var(--radius-lg)',
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(14, 21, 36, 0.95) 100%)',
+          border: '1.5px solid var(--secondary)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.85rem',
+          boxShadow: 'var(--shadow-md)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={22} style={{ color: 'var(--secondary)' }} />
+              <div>
+                <h3 style={{ fontSize: '1.05rem', color: '#fbbf24', margin: 0, fontWeight: 800 }}>
+                  Actividades Propuestas por Niños/Jóvenes Pendientes de Aprobación ({pendingYouthEvents.length})
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: '#e2e8f0' }}>
+                  Los jóvenes autorizados cargaron estas actividades en el calendario de su subgrupo. Requieren aprobación por un adulto de la institución para publicarse oficialmente.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '0.75rem' }}>
+            {pendingYouthEvents.map(pEv => (
+              <div
+                key={pEv.id}
+                style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(245, 158, 11, 0.45)',
+                  padding: '0.9rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.55rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div>
+                    <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', fontSize: '0.72rem', fontWeight: 700 }}>
+                      Subgrupo: {pEv.branchName}
+                    </span>
+                    <h4 style={{ fontSize: '0.98rem', color: '#ffffff', marginTop: '0.25rem', fontWeight: 700 }}>
+                      {pEv.title}
+                    </h4>
+                  </div>
+                  <span style={{ fontSize: '0.76rem', color: '#cbd5e1', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    📅 {pEv.date}
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.4 }}>
+                  {pEv.notes || 'Propuesta de actividad de subgrupo.'}
+                </div>
+
+                <div style={{ fontSize: '0.76rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Users size={13} />
+                  <span>Propuesto por: <strong>{pEv.proposedBy?.name || 'Joven del Subgrupo'}</strong> ({pEv.proposedBy?.branchName || pEv.branchName})</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem', paddingTop: '0.45rem', borderTop: '1px dashed var(--border-color)' }}>
+                  <button
+                    onClick={() => approveCalendarEvent(pEv.id)}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem',
+                      background: 'var(--primary)',
+                      color: '#ffffff',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                    title="Aprobar esta actividad e incluirla formalmente en el calendario oficial"
+                  >
+                    <CheckCircle2 size={15} />
+                    <span>Aprobar y Publicar</span>
+                  </button>
+                  <button
+                    onClick={() => rejectCalendarEvent(pEv.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      padding: '0.45rem 0.75rem',
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      color: '#f87171',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 700,
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                    title="Desestimar esta propuesta de actividad"
+                  >
+                    <Trash2 size={14} />
+                    <span>Desestimar</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* BRANCH CHECKBOX FILTERS (Tildes por rama para ver u ocultar) */}
       <div className="glass-panel" style={{
@@ -982,19 +1146,53 @@ export const CalendarView = () => {
                                   Logística de Campamento
                                 </span>
                               )}
+                              {(ev.approvalStatus === 'pending' || ev.isApproved === false) && (
+                                <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', border: '1px solid #f59e0b', fontSize: '0.68rem', fontWeight: 700 }}>
+                                  ⏳ Pendiente de Aprobación Adulta • Por {ev.proposedBy?.name || 'Joven'}
+                                </span>
+                              )}
+                              {ev.isApproved && ev.approvedBy && (
+                                <span style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                                  <CheckCircle2 size={11} />
+                                  ✓ Aprobado por {ev.approvedBy}
+                                </span>
+                              )}
                             </div>
                             <h4 style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{ev.title}</h4>
                           </div>
 
-                          {canEdit && (
-                            <button
-                              onClick={() => deleteEvent(ev.id)}
-                              title="Eliminar evento"
-                              style={{ color: 'var(--text-muted)', padding: '2px' }}
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            {(isAdultInInstitution || canEdit) && (ev.approvalStatus === 'pending' || ev.isApproved === false) && (
+                              <button
+                                onClick={() => approveCalendarEvent(ev.id)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  padding: '0.25rem 0.55rem',
+                                  background: 'var(--primary)',
+                                  color: '#fff',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                                title="Aprobar y publicar actividad en el calendario oficial"
+                              >
+                                <CheckCircle2 size={12} />
+                                <span>Aprobar</span>
+                              </button>
+                            )}
+                            {(canEdit || (currentUser && ev.proposedBy?.id === currentUser.id)) && (
+                              <button
+                                onClick={() => deleteEvent(ev.id)}
+                                title="Eliminar evento"
+                                style={{ color: 'var(--text-muted)', padding: '2px', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1125,7 +1323,7 @@ export const CalendarView = () => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                       <span className="badge" style={{ background: `${eventColor}25`, color: eventColor, fontWeight: 700 }}>
                         {ev.branchName || 'General'}
                       </span>
@@ -1135,6 +1333,17 @@ export const CalendarView = () => {
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
                         📅 {ev.date} ({ev.startTime} a {ev.endTime} hs)
                       </span>
+                      {(ev.approvalStatus === 'pending' || ev.isApproved === false) && (
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24', border: '1px solid #f59e0b', fontSize: '0.72rem', fontWeight: 700 }}>
+                          ⏳ Pendiente de Aprobación Adulta • Propuesto por {ev.proposedBy?.name || 'Joven'}
+                        </span>
+                      )}
+                      {ev.isApproved && ev.approvedBy && (
+                        <span style={{ fontSize: '0.74rem', color: '#34d399', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <CheckCircle2 size={12} />
+                          ✓ Aprobado por {ev.approvedBy}
+                        </span>
+                      )}
                     </div>
 
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)' }}>{ev.title}</h3>
@@ -1144,21 +1353,47 @@ export const CalendarView = () => {
                     </div>
                   </div>
 
-                  {canEdit && (
-                    <button
-                      onClick={() => deleteEvent(ev.id)}
-                      style={{
-                        padding: '0.45rem 0.85rem',
-                        background: 'var(--bg-input)',
-                        color: 'var(--accent-rose)',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.82rem',
-                        fontWeight: 600
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+                    {(isAdultInInstitution || canEdit) && (ev.approvalStatus === 'pending' || ev.isApproved === false) && (
+                      <button
+                        onClick={() => approveCalendarEvent(ev.id)}
+                        style={{
+                          padding: '0.45rem 0.95rem',
+                          background: 'var(--primary)',
+                          color: '#ffffff',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          boxShadow: 'var(--shadow-sm)'
+                        }}
+                        title="Aprobar esta actividad e incluirla formalmente en el calendario oficial"
+                      >
+                        <CheckCircle2 size={15} />
+                        <span>Aprobar Actividad</span>
+                      </button>
+                    )}
+                    {(canEdit || (currentUser && ev.proposedBy?.id === currentUser.id)) && (
+                      <button
+                        onClick={() => deleteEvent(ev.id)}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          background: 'var(--bg-input)',
+                          color: 'var(--accent-rose)',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          border: '1px solid var(--border-color)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {ev.notes && (

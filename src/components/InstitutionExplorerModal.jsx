@@ -1,18 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { 
-  Building2, 
-  Search, 
-  MapPin, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  Compass, 
-  GraduationCap, 
-  ShieldCheck, 
-  PlusCircle, 
-  ChevronRight, 
-  X, 
+import {
+  Building2,
+  Search,
+  MapPin,
+  Users,
+  CheckCircle2,
+  Clock,
+  Compass,
+  GraduationCap,
+  ShieldCheck,
+  PlusCircle,
+  ChevronRight,
+  X,
   AlertTriangle,
   Send,
   ArrowRight,
@@ -27,8 +27,8 @@ import {
 } from 'lucide-react';
 
 export const InstitutionExplorerModal = () => {
-  const { 
-    institutionExplorerOpen, 
+  const {
+    institutionExplorerOpen,
     setInstitutionExplorerOpen,
     data,
     currentUser,
@@ -38,11 +38,20 @@ export const InstitutionExplorerModal = () => {
     createAndActivateInstitution,
     availableUserOrgs,
     switchUserOrg,
-    selectOrg
+    selectOrg,
+    activeOrgId,
+    setCurrentTab,
+    isAdmin,
+    isAdvancedAdmin,
+    isSuperAdmin,
+    approveInstitutionBySuperAdmin,
+    rejectInstitutionBySuperAdmin
   } = useApp();
 
+  const isCreatorAdmin = isAdmin || isAdvancedAdmin || isSuperAdmin;
+
   const [activeTab, setActiveTab] = useState('search'); // 'search' | 'create_org' | 'my_requests'
-  
+
   // Search Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'scout' | 'school'
@@ -102,11 +111,14 @@ export const InstitutionExplorerModal = () => {
   const filteredOrgs = useMemo(() => {
     return (data.organizations || []).filter(org => {
       if (org.isBlocked) return false;
-      if (filterType !== 'all' && org.type !== filterType) return false;
+      if (filterType !== 'all') {
+        if (filterType === 'school' && org.type !== 'school' && org.type !== 'edu') return false;
+        if (filterType === 'scout' && org.type !== 'scout') return false;
+      }
       if (filterProvince !== 'all' && org.province !== filterProvince) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchName = org.name.toLowerCase().includes(q);
+        const matchName = (org.name || '').toLowerCase().includes(q);
         const matchCity = org.city?.toLowerCase().includes(q) || org.localidad?.toLowerCase().includes(q);
         const matchProv = org.province?.toLowerCase().includes(q);
         const matchCue = org.cue?.toLowerCase().includes(q);
@@ -116,6 +128,28 @@ export const InstitutionExplorerModal = () => {
       return true;
     });
   }, [data.organizations, filterType, filterProvince, searchQuery]);
+
+  // Filtered Pending Institutions (waiting for administrator approval)
+  const filteredPendingOrgs = useMemo(() => {
+    return (data.pendingInstitutions || []).filter(req => {
+      if (req.status === 'rejected') return false;
+      if (filterType !== 'all') {
+        if (filterType === 'school' && req.type !== 'school' && req.type !== 'edu') return false;
+        if (filterType === 'scout' && req.type !== 'scout') return false;
+      }
+      if (filterProvince !== 'all' && req.province && req.province !== filterProvince) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = (req.name || '').toLowerCase().includes(q);
+        const matchCity = req.city?.toLowerCase().includes(q) || req.localidad?.toLowerCase().includes(q) || req.location?.toLowerCase().includes(q);
+        const matchProv = req.province?.toLowerCase().includes(q);
+        const matchCue = req.cue?.toLowerCase().includes(q);
+        const matchBadge = req.badge?.toLowerCase().includes(q);
+        return matchName || matchCity || matchProv || matchCue || matchBadge;
+      }
+      return true;
+    });
+  }, [data.pendingInstitutions, filterType, filterProvince, searchQuery]);
 
   if (!institutionExplorerOpen) return null;
 
@@ -129,8 +163,8 @@ export const InstitutionExplorerModal = () => {
   };
 
   const handleToggleBranch = (branchId) => {
-    setSelectedBranches(prev => 
-      prev.includes(branchId) 
+    setSelectedBranches(prev =>
+      prev.includes(branchId)
         ? prev.filter(b => b !== branchId)
         : [...prev, branchId]
     );
@@ -197,12 +231,23 @@ export const InstitutionExplorerModal = () => {
       needsAuthorityAssignment: instForm.needsAuthorityAssignment
     };
 
-    if (autoActivate && createAndActivateInstitution) {
+    // Clear search filters so the new institution or request is immediately visible in the list
+    setSearchQuery('');
+    setFilterType('all');
+    setFilterProvince('all');
+
+    const shouldActivateImmediately = isCreatorAdmin && autoActivate;
+    if (shouldActivateImmediately && createAndActivateInstitution) {
       const res = createAndActivateInstitution(payload);
-      setCreatedOrgData(res.org);
+      const createdOrg = res?.org || { ...payload, id: res?.reqId };
+      setCreatedOrgData({ ...createdOrg, pending: false });
+      if (createdOrg?.id) {
+        if (switchUserOrg) switchUserOrg(createdOrg.id);
+        else if (selectOrg) selectOrg(createdOrg.id);
+      }
     } else {
-      const res = requestInstitutionCreation(payload);
-      setCreatedOrgData({ ...payload, id: res.reqId, pending: true });
+      const res = requestInstitutionCreation({ ...payload, forcePending: true });
+      setCreatedOrgData({ ...payload, id: res?.reqId, pending: true });
     }
 
     setCreateSentSuccess(true);
@@ -384,7 +429,7 @@ export const InstitutionExplorerModal = () => {
             }}
           >
             <Clock size={16} />
-            <span>3. Mis Solicitudes ({userAffiliations.length})</span>
+            <span>3. Mis Solicitudes ({userAffiliations.length + (data.pendingInstitutions || []).length})</span>
           </button>
         </div>
 
@@ -486,6 +531,115 @@ export const InstitutionExplorerModal = () => {
                 </span>
               </div>
 
+              {/* Pending Institutions Waiting for Admin Approval */}
+              {filteredPendingOrgs.length > 0 && (
+                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Clock size={15} />
+                    <span>Instituciones Cargadas — Pendientes de Aprobación por Administrador ({filteredPendingOrgs.length})</span>
+                  </div>
+                  {filteredPendingOrgs.map(req => (
+                    <div
+                      key={req.id}
+                      className="glass-panel"
+                      style={{
+                        background: 'var(--bg-card)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid rgba(251, 191, 36, 0.45)',
+                        padding: '0.85rem 1.1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'rgba(245, 158, 11, 0.2)',
+                          color: '#fbbf24',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {req.type === 'scout' ? <Compass size={20} /> : <GraduationCap size={20} />}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <h4 style={{ fontSize: '0.94rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
+                              {req.name}
+                            </h4>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              background: 'rgba(245, 158, 11, 0.16)',
+                              color: '#fbbf24',
+                              border: '1px solid rgba(251, 191, 36, 0.4)'
+                            }}>
+                              ⏳ Pendiente de Aprobación
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            📍 {req.city || req.location || 'Localidad'}{req.province ? `, ${req.province}` : ''} • Solicitante: {req.applicantName || 'Adulto Responsable'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isCreatorAdmin && approveInstitutionBySuperAdmin && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              approveInstitutionBySuperAdmin(req.id, req);
+                              setFeedbackNotice({
+                                type: 'success',
+                                text: `✅ Institución "${req.name}" aprobada y habilitada con éxito.`
+                              });
+                              setTimeout(() => setFeedbackNotice(null), 4000);
+                            }}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              background: '#10b981',
+                              color: '#ffffff',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✅ Aprobar y Habilitar
+                          </button>
+                          {rejectInstitutionBySuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => rejectInstitutionBySuperAdmin(req.id)}
+                              style={{
+                                padding: '0.4rem 0.65rem',
+                                background: 'var(--bg-input)',
+                                border: '1px solid var(--border-color)',
+                                color: '#f87171',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Rechazar
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Organizations List */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 {filteredOrgs.length === 0 ? (
@@ -520,17 +674,18 @@ export const InstitutionExplorerModal = () => {
                 ) : (
                   filteredOrgs.map(org => {
                     // Check user relationship with this organization
-                    const activeAffiliation = (data.members || []).find(m => 
-                      m.orgId === org.id && 
-                      m.email?.toLowerCase().trim() === userEmail && 
+                    const activeAffiliation = userEmail ? (data.members || []).find(m =>
+                      (m.orgId === org.id || m.orgIds?.includes(org.id)) &&
+                      m.email?.toLowerCase().trim() === userEmail &&
                       m.status === 'active'
-                    );
-                    const pendingAffiliation = (data.members || []).find(m => 
-                      m.orgId === org.id && 
-                      m.email?.toLowerCase().trim() === userEmail && 
+                    ) : null;
+                    const pendingAffiliation = userEmail ? (data.members || []).find(m =>
+                      m.orgId === org.id &&
+                      m.email?.toLowerCase().trim() === userEmail &&
                       m.status === 'pending'
-                    );
+                    ) : null;
 
+                    const isCurrentActiveOrg = org.id === activeOrgId;
                     const isApplyingThis = applyingOrgId === org.id;
 
                     return (
@@ -540,7 +695,7 @@ export const InstitutionExplorerModal = () => {
                         style={{
                           background: 'var(--bg-card)',
                           borderRadius: 'var(--radius-md)',
-                          border: isApplyingThis ? '1px solid var(--faro-cyan)' : '1px solid var(--border-color)',
+                          border: isCurrentActiveOrg ? '1.5px solid #4ade80' : (isApplyingThis ? '1px solid var(--faro-cyan)' : '1px solid var(--border-color)'),
                           boxShadow: isApplyingThis ? 'var(--faro-glow)' : 'var(--shadow-sm)',
                           overflow: 'hidden',
                           transition: 'all 0.2s ease'
@@ -573,7 +728,7 @@ export const InstitutionExplorerModal = () => {
 
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                <h3 style={{ fontSize: '0.96rem', color: 'var(--text-main)', margin: 0, fontWeight: 700 }}>
+                                <h3 style={{ fontSize: '0.96rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
                                   {org.name}
                                 </h3>
                                 <span style={{
@@ -582,13 +737,26 @@ export const InstitutionExplorerModal = () => {
                                   padding: '1px 6px',
                                   borderRadius: 'var(--radius-full)',
                                   background: 'var(--bg-input)',
-                                  color: 'var(--text-muted)',
+                                  color: '#e2e8f0',
                                   border: '1px solid var(--border-color)'
                                 }}>
                                   {org.badge}
                                 </span>
+                                {isCurrentActiveOrg && (
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: 700,
+                                    padding: '1px 7px',
+                                    borderRadius: 'var(--radius-full)',
+                                    background: 'rgba(34, 197, 94, 0.18)',
+                                    color: '#4ade80',
+                                    border: '1px solid rgba(74, 222, 128, 0.4)'
+                                  }}>
+                                    ✓ Activa
+                                  </span>
+                                )}
                                 {org.cue && (
-                                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+                                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
                                     CUE: {org.cue}
                                   </span>
                                 )}
@@ -608,44 +776,45 @@ export const InstitutionExplorerModal = () => {
                           </div>
 
                           {/* Action Button or Membership Status */}
-                          <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (switchUserOrg) switchUserOrg(org.id);
+                                else selectOrg(org.id);
+                                if (setCurrentTab) setCurrentTab('folders');
+                                setInstitutionExplorerOpen(false);
+                              }}
+                              style={{
+                                padding: '0.4rem 0.75rem',
+                                background: isCurrentActiveOrg ? 'rgba(34, 197, 94, 0.18)' : 'var(--faro-cyan-bg)',
+                                border: isCurrentActiveOrg ? '1px solid #4ade80' : '1px solid var(--border-faro)',
+                                color: isCurrentActiveOrg ? '#4ade80' : 'var(--faro-cyan-light)',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {isCurrentActiveOrg ? 'Sede Cargada ➔' : 'Cargar / Abrir Sede ➔'}
+                            </button>
+
                             {activeAffiliation ? (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  padding: '3px 8px',
-                                  borderRadius: 'var(--radius-full)',
-                                  background: 'rgba(16, 185, 129, 0.15)',
-                                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                                  color: '#34d399',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700
-                                }}>
-                                  <CheckCircle2 size={12} />
-                                  <span>Miembro Activo ({activeAffiliation.role})</span>
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    if (switchUserOrg) switchUserOrg(org.id);
-                                    else selectOrg(org.id);
-                                    setInstitutionExplorerOpen(false);
-                                  }}
-                                  style={{
-                                    padding: '0.35rem 0.65rem',
-                                    background: 'var(--faro-cyan-bg)',
-                                    border: '1px solid var(--border-faro)',
-                                    color: 'var(--faro-cyan-light)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontSize: '0.74rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  Navegar Sede ➔
-                                </button>
-                              </div>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '3px 8px',
+                                borderRadius: 'var(--radius-full)',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                color: '#34d399',
+                                fontSize: '0.74rem',
+                                fontWeight: 700
+                              }}>
+                                <CheckCircle2 size={12} />
+                                <span>Miembro ({activeAffiliation.role})</span>
+                              </span>
                             ) : pendingAffiliation ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <span style={{
@@ -661,7 +830,7 @@ export const InstitutionExplorerModal = () => {
                                   fontWeight: 700
                                 }}>
                                   <Clock size={12} />
-                                  <span>Pendiente de autorización</span>
+                                  <span>Pendiente</span>
                                 </span>
                                 <button
                                   onClick={() => cancelAffiliationRequest(pendingAffiliation.id)}
@@ -686,11 +855,11 @@ export const InstitutionExplorerModal = () => {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '0.35rem',
-                                  padding: '0.45rem 0.85rem',
+                                  padding: '0.4rem 0.75rem',
                                   background: isApplyingThis ? 'var(--bg-input)' : 'var(--gradient-faro)',
                                   color: '#ffffff',
-                                  borderRadius: 'var(--radius-md)',
-                                  fontSize: '0.78rem',
+                                  borderRadius: 'var(--radius-sm)',
+                                  fontSize: '0.76rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                   boxShadow: isApplyingThis ? 'none' : 'var(--shadow-sm)'
@@ -896,30 +1065,32 @@ export const InstitutionExplorerModal = () => {
                   textAlign: 'center',
                   background: 'var(--bg-card)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                  border: createdOrgData && !createdOrgData.pending
+                    ? '1px solid rgba(16, 185, 129, 0.3)'
+                    : '1px solid rgba(251, 191, 36, 0.4)'
                 }}>
                   <div style={{
                     width: '56px',
                     height: '56px',
                     borderRadius: 'var(--radius-full)',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    color: '#34d399',
+                    background: createdOrgData && !createdOrgData.pending ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.16)',
+                    color: createdOrgData && !createdOrgData.pending ? '#34d399' : '#fbbf24',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto 1rem'
                   }}>
-                    <CheckCircle2 size={32} />
+                    {createdOrgData && !createdOrgData.pending ? <CheckCircle2 size={32} /> : <Clock size={32} />}
                   </div>
-                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                    {createdOrgData && !createdOrgData.pending 
-                      ? `¡${instForm.name} Creada y Habilitada con Éxito!` 
-                      : '¡Solicitud de Fundación Enviada!'}
+                  <h3 style={{ fontSize: '1.25rem', color: '#ffffff', marginBottom: '0.5rem' }}>
+                    {createdOrgData && !createdOrgData.pending
+                      ? `¡${instForm.name} Creada y Habilitada con Éxito!`
+                      : `¡Solicitud de "${instForm.name}" Registrada!`}
                   </h3>
                   <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.45 }}>
                     {createdOrgData && !createdOrgData.pending
-                      ? 'La institución / grupo ha sido dada de alta y activada en tu cuenta con rol de Responsable Institucional. Ya podés comenzar a cargar integrantes, ramas y planificaciones de inmediato.'
-                      : `La institución ${instForm.name} fue enviada con su información geográfica completa al Super Administrador y Administradores Generales para su verificación y activación en la red.`}
+                      ? 'Como Administrador, la institución ha sido dada de alta y activada inmediatamente en la plataforma. Ya podés comenzar a cargar integrantes, ramas y planificaciones.'
+                      : 'La institución fue cargada correctamente y se encuentra pendiente de aprobación hasta que un Administrador la revise y habilite oficialmente.'}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     {createdOrgData && !createdOrgData.pending ? (
@@ -932,6 +1103,7 @@ export const InstitutionExplorerModal = () => {
                             if (switchUserOrg) switchUserOrg(createdOrgData.id);
                             else selectOrg(createdOrgData.id);
                           }
+                          if (setCurrentTab) setCurrentTab('folders');
                         }}
                         style={{
                           padding: '0.65rem 1.4rem',
@@ -950,22 +1122,23 @@ export const InstitutionExplorerModal = () => {
                         <Rocket size={16} />
                         <span>Comenzar a Cargar la Institución Ahora</span>
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => { setCreateSentSuccess(false); setActiveTab('search'); }}
-                        style={{
-                          padding: '0.55rem 1.25rem',
-                          background: 'var(--gradient-faro)',
-                          color: '#fff',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: '0.82rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Volver a Explorar Instituciones
-                      </button>
-                    )}
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => { setCreateSentSuccess(false); setActiveTab('search'); }}
+                      style={{
+                        padding: '0.65rem 1.25rem',
+                        background: createdOrgData && !createdOrgData.pending ? 'var(--bg-input)' : 'var(--gradient-faro)',
+                        border: '1px solid var(--border-color)',
+                        color: '#ffffff',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.84rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ver en la Lista de Instituciones
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -994,14 +1167,14 @@ export const InstitutionExplorerModal = () => {
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-color)'
                   }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <Building2 size={16} style={{ color: 'var(--faro-cyan-light)' }} />
                       <span>Identidad de la Institución o Grupo</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Nombre de la Institución / Grupo *
                         </label>
                         <input
@@ -1012,18 +1185,18 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Grupo Scout Los Alerces N° 305"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Tipo de Institución *
                         </label>
                         <select
@@ -1031,12 +1204,12 @@ export const InstitutionExplorerModal = () => {
                           onChange={(e) => setInstForm(prev => ({ ...prev, type: e.target.value }))}
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         >
                           <option value="scout">⚜️ Grupo Scout / Guía</option>
@@ -1045,7 +1218,7 @@ export const InstitutionExplorerModal = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Insignia o Distintivo
                         </label>
                         <input
@@ -1055,18 +1228,18 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Distrito 3 - Zona 12"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           CUE / N° Registro Oficial
                         </label>
                         <input
@@ -1076,12 +1249,12 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: 0604567-00"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
@@ -1095,14 +1268,14 @@ export const InstitutionExplorerModal = () => {
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-color)'
                   }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <MapPin size={16} style={{ color: '#34d399' }} />
                       <span>Ubicación Geográfica y Formal</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           País
                         </label>
                         <input
@@ -1111,18 +1284,18 @@ export const InstitutionExplorerModal = () => {
                           onChange={(e) => setInstForm(prev => ({ ...prev, country: e.target.value }))}
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Provincia *
                         </label>
                         <input
@@ -1133,18 +1306,18 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Buenos Aires"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Partido / Departamento *
                         </label>
                         <input
@@ -1155,18 +1328,18 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Vicente López"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Localidad / Ciudad *
                         </label>
                         <input
@@ -1177,18 +1350,18 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Olivos"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div style={{ gridColumn: 'span 2' }}>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
                           Calle y Número (Dirección de Sede) *
                         </label>
                         <input
@@ -1199,12 +1372,12 @@ export const InstitutionExplorerModal = () => {
                           placeholder="Ej: Av. Maipú 1540"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
@@ -1218,97 +1391,113 @@ export const InstitutionExplorerModal = () => {
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-color)'
                   }}>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Users size={16} style={{ color: 'var(--secondary-text)' }} />
-                      <span>Datos del Adulto Solicitante & Supervisión</span>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Users size={16} style={{ color: 'var(--secondary)' }} />
+                      <span>Datos de Quien Realiza la Carga de la Institución (Solicitante)</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          Nombre y Apellido *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={instForm.applicantName}
-                          onChange={(e) => setInstForm(prev => ({ ...prev, applicantName: e.target.value }))}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            background: 'var(--bg-input)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
-                          }}
-                        />
-                      </div>
+                    <div style={{
+                      fontSize: '0.76rem',
+                      color: '#38bdf8',
+                      background: 'rgba(56, 189, 248, 0.1)',
+                      padding: '0.55rem 0.8rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      marginBottom: '0.75rem',
+                      lineHeight: 1.45
+                    }}>
+                      ℹ️ <strong>Importante:</strong> Quien realiza la carga no necesariamente es la autoridad máxima (directivo o jefe de grupo). Completa tu documento y al lado el cargo que ejerces; la autoridad formal se registra o designa formalmente luego.
+                    </div>
 
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                        Nombre y Apellido de Quien Carga *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nombre completo del solicitante"
+                        value={instForm.applicantName}
+                        onChange={(e) => setInstForm(prev => ({ ...prev, applicantName: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem',
+                          background: 'var(--bg-input)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#ffffff',
+                          fontSize: '0.84rem'
+                        }}
+                      />
+                    </div>
+
+                    {/* Documento y al lado Cargo en la institución o grupo */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          DNI del Solicitante *
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                          Documento de Quien Carga (DNI / Cédula) *
                         </label>
                         <input
                           type="text"
                           required
                           value={instForm.applicantDni}
                           onChange={(e) => setInstForm(prev => ({ ...prev, applicantDni: e.target.value }))}
-                          placeholder="Ej: 32456789"
+                          placeholder="Ej: 32.456.789"
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          Teléfono de Contacto *
-                        </label>
-                        <input
-                          type="tel"
-                          required
-                          value={instForm.applicantPhone}
-                          onChange={(e) => setInstForm(prev => ({ ...prev, applicantPhone: e.target.value }))}
-                          placeholder="+54 9 11 ..."
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            background: 'var(--bg-input)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                          Cargo / Rol en la Institución
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                          Cargo en la Institución o Grupo *
                         </label>
                         <input
                           type="text"
+                          required
                           value={instForm.applicantRole}
                           onChange={(e) => setInstForm(prev => ({ ...prev, applicantRole: e.target.value }))}
-                          placeholder="Ej: Jefe de Grupo / Educador Fundador"
+                          placeholder="Ej: Educador, Docente, Secretario, Colaborador..."
                           style={{
                             width: '100%',
-                            padding: '0.5rem',
+                            padding: '0.55rem',
                             background: 'var(--bg-input)',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-sm)',
-                            color: 'var(--text-main)',
-                            fontSize: '0.8rem'
+                            color: '#ffffff',
+                            fontSize: '0.84rem'
                           }}
                         />
                       </div>
+                    </div>
+
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                        Teléfono de Contacto Oficial *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={instForm.applicantPhone}
+                        onChange={(e) => setInstForm(prev => ({ ...prev, applicantPhone: e.target.value }))}
+                        placeholder="+54 9 11 ..."
+                        style={{
+                          width: '100%',
+                          padding: '0.55rem',
+                          background: 'var(--bg-input)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: '#ffffff',
+                          fontSize: '0.84rem'
+                        }}
+                      />
                     </div>
 
                     {/* Needs authority assignment checkbox */}
@@ -1335,31 +1524,51 @@ export const InstitutionExplorerModal = () => {
                         </span>
                       </label>
                     </div>
-                    {/* Immediate activation toggle */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '0.6rem',
-                      background: 'rgba(16, 185, 129, 0.09)',
-                      padding: '0.75rem 0.9rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
-                      marginTop: '0.65rem'
-                    }}>
-                      <input
-                        type="checkbox"
-                        id="chkAutoActivate"
-                        checked={autoActivate}
-                        onChange={(e) => setAutoActivate(e.target.checked)}
-                        style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
-                      />
-                      <label htmlFor="chkAutoActivate" style={{ fontSize: '0.78rem', color: 'var(--text-main)', cursor: 'pointer', lineHeight: 1.4 }}>
-                        <strong style={{ color: '#34d399' }}>Habilitar y Activar Inmediatamente (Recomendado):</strong><br />
-                        <span style={{ color: 'var(--text-muted)' }}>
-                          Crea la institución al instante y te asigna como responsable para que puedas comenzar a cargar integrantes, ramas y cronogramas sin demoras ni trámites de espera.
+                    {/* Immediate activation toggle (Only for Administrators) or Pending Notice */}
+                    {isCreatorAdmin ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.6rem',
+                        background: 'rgba(16, 185, 129, 0.09)',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        marginTop: '0.65rem'
+                      }}>
+                        <input
+                          type="checkbox"
+                          id="chkAutoActivate"
+                          checked={autoActivate}
+                          onChange={(e) => setAutoActivate(e.target.checked)}
+                          style={{ marginTop: '3px', cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        <label htmlFor="chkAutoActivate" style={{ fontSize: '0.78rem', color: '#ffffff', cursor: 'pointer', lineHeight: 1.4 }}>
+                          <strong style={{ color: '#34d399' }}>Habilitar y Activar Inmediatamente (Permiso de Administrador):</strong><br />
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            Como Administrador, la institución se crea y activa al instante sin requerir aprobación previa.
+                          </span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid rgba(251, 191, 36, 0.35)',
+                        marginTop: '0.65rem',
+                        fontSize: '0.78rem',
+                        color: '#ffffff'
+                      }}>
+                        <Clock size={16} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                        <span>
+                          <strong style={{ color: '#fbbf24' }}>Aprobación por Administrador:</strong> Al cargar esta institución, quedará registrada en estado <strong>Pendiente de Aprobación</strong> hasta que un Administrador la autorice.
                         </span>
-                      </label>
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
@@ -1380,7 +1589,7 @@ export const InstitutionExplorerModal = () => {
                       }}
                     >
                       <Building2 size={16} />
-                      <span>{autoActivate ? 'Crear y Habilitar Institución / Grupo' : 'Registrar y Enviar para Aprobación'}</span>
+                      <span>{isCreatorAdmin && autoActivate ? 'Crear y Habilitar Institución / Grupo' : 'Registrar y Enviar para Aprobación'}</span>
                     </button>
                   </div>
                 </form>
@@ -1389,185 +1598,293 @@ export const InstitutionExplorerModal = () => {
           )}
 
           {/* ============================================================== */}
-          {/* TAB 3: MIS SOLICITUDES DE AFILIACIÓN                           */}
+          {/* TAB 3: MIS SOLICITUDES DE AFILIACIÓN E INSTITUCIONES           */}
           {/* ============================================================== */}
           {activeTab === 'my_requests' && (
-            <div>
-              <div style={{
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                color: 'var(--text-main)',
-                marginBottom: '0.75rem'
-              }}>
-                Historial de Solicitudes y Vinculaciones ({userAffiliations.length})
-              </div>
-
-              {userAffiliations.length === 0 ? (
-                <div style={{
-                  padding: '2.5rem 1rem',
-                  textAlign: 'center',
-                  background: 'var(--bg-card)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)'
-                }}>
-                  <Clock size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 0.5rem', opacity: 0.5 }} />
-                  <h3 style={{ fontSize: '0.96rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-                    Aún no enviaste ninguna solicitud de afiliación
-                  </h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', maxWidth: '360px', margin: '0 auto 1rem' }}>
-                    Explorá las instituciones de la red para unirte como educador, familia o protagonista.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('search')}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'var(--gradient-faro)',
-                      color: '#fff',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.8rem',
-                      fontWeight: 700
-                    }}
-                  >
-                    🔍 Buscar Instituciones
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {userAffiliations.map(aff => {
-                    const org = (data.organizations || []).find(o => o.id === aff.orgId);
-                    const isPending = aff.status === 'pending';
-                    const isActive = aff.status === 'active';
-
-                    return (
-                      <div
-                        key={aff.id}
-                        className="glass-panel"
-                        style={{
-                          background: 'var(--bg-card)',
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {(data.pendingInstitutions || []).length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fbbf24' }}>
+                    Solicitudes de Alta de Instituciones Pendientes de Aprobación ({(data.pendingInstitutions || []).length})
+                  </div>
+                  {(data.pendingInstitutions || []).map(req => (
+                    <div
+                      key={req.id}
+                      className="glass-panel"
+                      style={{
+                        background: 'var(--bg-card)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '0.9rem 1.15rem',
+                        border: '1px solid rgba(251, 191, 36, 0.45)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
                           borderRadius: 'var(--radius-md)',
-                          padding: '0.9rem 1.15rem',
-                          border: '1px solid var(--border-color)',
+                          background: 'rgba(245, 158, 11, 0.2)',
+                          color: '#fbbf24',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          flexWrap: 'wrap'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: 'var(--radius-md)',
-                            background: org?.color || '#0ea5e9',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
-                          }}>
-                            {org?.type === 'scout' ? <Compass size={20} /> : <GraduationCap size={20} />}
-                          </div>
-
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                              <h4 style={{ fontSize: '0.92rem', color: 'var(--text-main)', margin: 0, fontWeight: 700 }}>
-                                {org?.name || `Institución ${aff.orgId}`}
-                              </h4>
-                              <span style={{
-                                fontSize: '0.68rem',
-                                padding: '1px 6px',
-                                borderRadius: 'var(--radius-full)',
-                                background: 'var(--bg-input)',
-                                color: 'var(--text-muted)'
-                              }}>
-                                Rol: {aff.roleLabel || aff.role}
-                              </span>
-                            </div>
-
-                            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              {aff.presentation?.requestedAt ? `Solicitado el ${aff.presentation.requestedAt}` : 'Solicitud registrada'}
-                              {aff.jurisdiction && ` • Jurisdicción: ${aff.jurisdiction}`}
-                            </div>
-                          </div>
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {req.type === 'scout' ? <Compass size={20} /> : <GraduationCap size={20} />}
                         </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {isActive ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '3px 8px',
-                                borderRadius: 'var(--radius-full)',
-                                background: 'rgba(16, 185, 129, 0.15)',
-                                color: '#34d399',
-                                fontSize: '0.74rem',
-                                fontWeight: 700
-                              }}>
-                                <CheckCircle2 size={13} />
-                                <span>Aprobado por los adultos</span>
-                              </span>
-                              <button
-                                onClick={() => {
-                                  if (switchUserOrg) switchUserOrg(aff.orgId);
-                                  else selectOrg(aff.orgId);
-                                  setInstitutionExplorerOpen(false);
-                                }}
-                                style={{
-                                  padding: '0.35rem 0.65rem',
-                                  background: 'var(--gradient-faro)',
-                                  color: '#fff',
-                                  borderRadius: 'var(--radius-sm)',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Ingresar ➔
-                              </button>
-                            </div>
-                          ) : isPending ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                              <span style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '3px 8px',
-                                borderRadius: 'var(--radius-full)',
-                                background: 'rgba(245, 158, 11, 0.15)',
-                                color: 'var(--secondary-text)',
-                                fontSize: '0.74rem',
-                                fontWeight: 700
-                              }}>
-                                <Clock size={13} />
-                                <span>Esperando autorización de adultos</span>
-                              </span>
-                              <button
-                                onClick={() => cancelAffiliationRequest(aff.id)}
-                                style={{
-                                  padding: '0.3rem 0.55rem',
-                                  background: 'var(--bg-input)',
-                                  border: '1px solid var(--border-color)',
-                                  color: 'var(--text-muted)',
-                                  borderRadius: 'var(--radius-sm)',
-                                  fontSize: '0.7rem',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '0.74rem', color: '#f87171' }}>Rechazada</span>
-                          )}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <h4 style={{ fontSize: '0.92rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
+                              {req.name}
+                            </h4>
+                            <span style={{
+                              fontSize: '0.68rem',
+                              padding: '1px 7px',
+                              borderRadius: 'var(--radius-full)',
+                              background: 'rgba(245, 158, 11, 0.16)',
+                              color: '#fbbf24',
+                              fontWeight: 700
+                            }}>
+                              ⏳ Esperando aprobación de Administrador
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            Solicitante: {req.applicantName} ({req.applicantRole}) • Fecha: {req.dateRequested || 'Reciente'}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {isCreatorAdmin && approveInstitutionBySuperAdmin && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              approveInstitutionBySuperAdmin(req.id, req);
+                              setFeedbackNotice({
+                                type: 'success',
+                                text: `✅ Institución "${req.name}" aprobada y habilitada con éxito.`
+                              });
+                              setTimeout(() => setFeedbackNotice(null), 4000);
+                            }}
+                            style={{
+                              padding: '0.35rem 0.75rem',
+                              background: '#10b981',
+                              color: '#ffffff',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✅ Aprobar y Habilitar
+                          </button>
+                          {rejectInstitutionBySuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => rejectInstitutionBySuperAdmin(req.id)}
+                              style={{
+                                padding: '0.35rem 0.65rem',
+                                background: 'var(--bg-input)',
+                                border: '1px solid var(--border-color)',
+                                color: '#f87171',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Rechazar
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
+
+              <div>
+                <div style={{
+                  fontSize: '0.84rem',
+                  fontWeight: 700,
+                  color: 'var(--text-main)',
+                  marginBottom: '0.75rem'
+                }}>
+                  Historial de Solicitudes de Ingreso a Sedes ({userAffiliations.length})
+                </div>
+
+                {userAffiliations.length === 0 ? (
+                  <div style={{
+                    padding: '2.5rem 1rem',
+                    textAlign: 'center',
+                    background: 'var(--bg-card)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)'
+                  }}>
+                    <Clock size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 0.5rem', opacity: 0.5 }} />
+                    <h3 style={{ fontSize: '0.96rem', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+                      Aún no enviaste ninguna solicitud de afiliación
+                    </h3>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', maxWidth: '360px', margin: '0 auto 1rem' }}>
+                      Explorá las instituciones de la red para unirte como educador, familia o protagonista.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('search')}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: 'var(--gradient-faro)',
+                        color: '#fff',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.8rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      🔍 Buscar Instituciones
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {userAffiliations.map(aff => {
+                      const org = (data.organizations || []).find(o => o.id === aff.orgId);
+                      const isPending = aff.status === 'pending';
+                      const isActive = aff.status === 'active';
+
+                      return (
+                        <div
+                          key={aff.id}
+                          className="glass-panel"
+                          style={{
+                            background: 'var(--bg-card)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '0.9rem 1.15rem',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: 'var(--radius-md)',
+                              background: org?.color || '#0ea5e9',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {org?.type === 'scout' ? <Compass size={20} /> : <GraduationCap size={20} />}
+                            </div>
+
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                <h4 style={{ fontSize: '0.92rem', color: 'var(--text-main)', margin: 0, fontWeight: 700 }}>
+                                  {org?.name || `Institución ${aff.orgId}`}
+                                </h4>
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  padding: '1px 6px',
+                                  borderRadius: 'var(--radius-full)',
+                                  background: 'var(--bg-input)',
+                                  color: 'var(--text-muted)'
+                                }}>
+                                  Rol: {aff.roleLabel || aff.role}
+                                </span>
+                              </div>
+
+                              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                {aff.presentation?.requestedAt ? `Solicitado el ${aff.presentation.requestedAt}` : 'Solicitud registrada'}
+                                {aff.jurisdiction && ` • Jurisdicción: ${aff.jurisdiction}`}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {isActive ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '3px 8px',
+                                  borderRadius: 'var(--radius-full)',
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#34d399',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700
+                                }}>
+                                  <CheckCircle2 size={13} />
+                                  <span>Aprobado por los adultos</span>
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    if (switchUserOrg) switchUserOrg(aff.orgId);
+                                    else selectOrg(aff.orgId);
+                                    setInstitutionExplorerOpen(false);
+                                  }}
+                                  style={{
+                                    padding: '0.35rem 0.65rem',
+                                    background: 'var(--gradient-faro)',
+                                    color: '#fff',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Ingresar ➔
+                                </button>
+                              </div>
+                            ) : isPending ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  padding: '3px 8px',
+                                  borderRadius: 'var(--radius-full)',
+                                  background: 'rgba(245, 158, 11, 0.15)',
+                                  color: 'var(--secondary-text)',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700
+                                }}>
+                                  <Clock size={13} />
+                                  <span>Esperando autorización de adultos</span>
+                                </span>
+                                <button
+                                  onClick={() => cancelAffiliationRequest(aff.id)}
+                                  style={{
+                                    padding: '0.3rem 0.55rem',
+                                    background: 'var(--bg-input)',
+                                    border: '1px solid var(--border-color)',
+                                    color: 'var(--text-muted)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '0.74rem', color: '#f87171' }}>Rechazada</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

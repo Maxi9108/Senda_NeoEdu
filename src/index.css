@@ -1,33 +1,34 @@
 :root {
+  color-scheme: dark;
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
-  
+
   /* ========================================================
      PALETA NEOFARO + NATURALEZA + EDUCACIÓN (POR DEFECTO)
      - NeoFaro: Obsidian night canvas, Glowing Cyan Beacon (#06b6d4, #22d3ee)
      - Naturaleza: Emerald & Jade Forest (#10b981, #059669, #34d399)
      - Educación: Wisdom Amber & Gold (#f59e0b, #fbbf24)
      ======================================================== */
-  
+
   /* Naturaleza & Scout (Primary Action) */
   --primary: #10b981;
   --primary-hover: #059669;
   --primary-light: rgba(16, 185, 129, 0.16);
   --primary-text: #34d399;
-  
+
   /* Educación & Sabiduría (Secondary & Milestones) */
   --secondary: #f59e0b;
   --secondary-hover: #d97706;
   --secondary-light: rgba(245, 158, 11, 0.18);
   --secondary-text: #fbbf24;
-  
+
   /* Faro del Conocimiento (Cyan Beam & Guía - estilo neofaro.com.ar) */
   --faro-cyan: #06b6d4;
   --faro-cyan-hover: #0891b2;
   --faro-cyan-light: #22d3ee;
   --faro-cyan-bg: rgba(6, 182, 212, 0.14);
   --faro-glow: 0 0 24px rgba(6, 182, 212, 0.3);
-  
+
   /* Accents */
   --accent-blue: #0ea5e9;
   --accent-blue-light: rgba(14, 165, 233, 0.16);
@@ -35,7 +36,7 @@
   --accent-purple-light: rgba(139, 92, 246, 0.16);
   --accent-rose: #f43f5e;
   --accent-rose-light: rgba(244, 63, 94, 0.16);
-  
+
   /* NeoFaro Obsidian Night Surfaces */
   --bg-app: #080c14;
   --bg-surface: #0e1524;
@@ -43,41 +44,42 @@
   --bg-sidebar: #06090f;
   --bg-sidebar-hover: #142036;
   --bg-input: #0b1120;
-  
+
   /* Borders & Glassmorphic Highlights */
   --border-color: #1e2d44;
   --border-focus: #06b6d4;
   --border-faro: rgba(6, 182, 212, 0.3);
   --border-nature: rgba(16, 185, 129, 0.3);
-  
+
   /* Text */
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   --text-inverse: #080c14;
-  
+
   /* Shadows & Ambient Glows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
   --shadow-md: 0 4px 14px -1px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(6, 182, 212, 0.1);
   --shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(16, 185, 129, 0.12);
   --shadow-xl: 0 24px 38px -6px rgba(0, 0, 0, 0.7), 0 0 24px rgba(6, 182, 212, 0.15);
-  
+
   /* Gradients */
   --gradient-faro: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
   --gradient-nature: linear-gradient(135deg, #10b981 0%, #059669 100%);
   --gradient-edu: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   --gradient-hero: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(14, 21, 36, 0.95) 100%);
-  
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-full: 9999px;
-  
+
   --font-scale: 1rem;
 }
 
 [data-theme="neofaro"] {
   /* Aligns with :root NeoFaro Nature & Education scheme */
+  color-scheme: dark;
   --bg-app: #080c14;
   --bg-surface: #0e1524;
   --bg-card: #121c2e;
@@ -94,60 +96,62 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --primary: #059669;
   --primary-hover: #047857;
   --primary-light: #d1fae5;
   --primary-text: #065f46;
-  
+
   --secondary: #d97706;
   --secondary-hover: #b45309;
   --secondary-light: #fef3c7;
   --secondary-text: #92400e;
-  
+
   --faro-cyan: #0891b2;
   --faro-cyan-light: #06b6d4;
   --faro-cyan-bg: #e0f2fe;
-  
+
   --bg-app: #f1f5f9;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
   --bg-sidebar: #0f172a;
   --bg-sidebar-hover: #1e293b;
   --bg-input: #f8fafc;
-  
+
   --border-color: #cbd5e1;
   --border-focus: #059669;
-  
+
   --text-main: #0f172a;
   --text-muted: #475569;
   --text-dim: #64748b;
   --text-inverse: #ffffff;
-  
+
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --primary: #10b981;
   --primary-hover: #059669;
   --primary-light: rgba(16, 185, 129, 0.2);
   --primary-text: #34d399;
-  
+
   --secondary: #f59e0b;
   --secondary-hover: #d97706;
   --secondary-light: rgba(245, 158, 11, 0.2);
-  
+
   --bg-app: #080c14;
   --bg-surface: #0e1524;
   --bg-card: #121c2e;
   --bg-sidebar: #06090f;
   --bg-sidebar-hover: #142036;
   --bg-input: #0b1120;
-  
+
   --border-color: #1e2d44;
   --border-focus: #06b6d4;
-  
+
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-inverse: #080c14;
@@ -167,7 +171,8 @@
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   max-height: 100vh;
@@ -196,16 +201,119 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.25;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
+}
+
+/* ========================================================
+   GLOBAL FORM CONTROLS & HIGH-CONTRAST TYPOGRAPHY
+   Letras blancas y nítidas para cargar datos que no se pierdan con el fondo
+   ======================================================== */
+input,
+select,
+textarea {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  background-color: var(--bg-input);
+}
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a;
+  background-color: #ffffff;
+}
+
+/* Protección contra autocompletado del navegador que fuerza texto negro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  color: #ffffff !important;
+  caret-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0b1120 inset !important;
+  box-shadow: 0 0 0px 1000px #0b1120 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+[data-theme="light"] input:-webkit-autofill,
+[data-theme="light"] input:-webkit-autofill:hover,
+[data-theme="light"] input:-webkit-autofill:focus,
+[data-theme="light"] input:-webkit-autofill:active,
+[data-theme="light"] textarea:-webkit-autofill,
+[data-theme="light"] select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  color: #0f172a !important;
+  caret-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+}
+
+/* Placeholders con alta visibilidad y contraste garantizado */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.65) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.65) !important;
+  opacity: 1;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1;
+}
+
+/* Labels de campos: siempre blancos y legibles */
+label {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+[data-theme="light"] label {
+  color: #1e293b !important;
+}
+
+/* Opciones en selects con fondo oscuro y letras blancas */
+select option,
+select optgroup {
+  background-color: #0e1524 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  padding: 6px;
+}
+
+[data-theme="light"] select option,
+[data-theme="light"] select optgroup {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
 }
 
 button {
@@ -240,18 +348,37 @@ button:active {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulseSubtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-fade-in {
@@ -329,12 +456,15 @@ button:active {
   .bottom-nav-mobile {
     display: none !important;
   }
+
   .navbar-mobile-toggle {
     display: none !important;
   }
+
   .sidebar-mobile-header {
     display: none !important;
   }
+
   .app-sidebar {
     width: 260px;
     min-width: 260px;
@@ -345,15 +475,20 @@ button:active {
 }
 
 @media (max-width: 860px) {
+
   /* Dynamic Viewport height for modern mobile browsers */
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100vh;
     height: 100dvh;
     max-height: 100dvh;
   }
 
   /* Prevent auto-zooming on input focus in iOS/Android */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     font-size: 16px !important;
   }
 
@@ -465,4 +600,3 @@ button:active {
     grid-template-columns: 1fr !important;
   }
 }
-

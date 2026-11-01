@@ -1360,91 +1360,134 @@ export const SuperAdminPanel = () => {
                 flexDirection: 'column',
                 gap: '0.75rem'
               }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)' }}>
-                  👤 Datos del Solicitante / Futuro Responsable:
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--primary)' }}>
+                  👤 Datos de Quien Carga la Institución (Solicitante):
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div style={{
+                  fontSize: '0.76rem',
+                  color: '#38bdf8',
+                  background: 'rgba(56, 189, 248, 0.1)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  lineHeight: 1.4
+                }}>
+                  ℹ️ <strong>Nota:</strong> Quien carga la institución no necesariamente es la autoridad directiva. Indica tu documento y al lado el cargo en la institución o grupo; la autoridad se registra o regulariza formalmente luego.
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                    Nombre Completo de Quien Carga *
+                  </label>
                   <input
                     type="text"
-                    placeholder="Nombre Completo del Responsable *"
+                    placeholder="Ej. Carlos Méndez / Mariana Castro"
                     value={applicantName}
                     onChange={(e) => setApplicantName(e.target.value)}
                     required
                     style={{
+                      width: '100%',
                       padding: '0.55rem 0.75rem',
                       borderRadius: 'var(--radius-sm)',
                       border: '1px solid var(--border-color)',
                       background: 'var(--bg-input)',
-                      color: 'var(--text-main)',
+                      color: '#ffffff',
                       fontSize: '0.86rem'
                     }}
                   />
-                  <input
-                    type="text"
-                    placeholder="DNI / Cédula Identidad *"
-                    value={applicantDni}
-                    onChange={(e) => setApplicantDni(e.target.value)}
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text-main)',
-                      fontSize: '0.86rem'
-                    }}
-                  />
+                </div>
+
+                {/* Documento y al lado Cargo en la institución o grupo */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Documento (DNI / Cédula) *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: 28.455.120"
+                      value={applicantDni}
+                      onChange={(e) => setApplicantDni(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-input)',
+                        color: '#ffffff',
+                        fontSize: '0.86rem'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Cargo en la Institución o Grupo *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Educador, Docente, Secretario, Directivo..."
+                      value={applicantRole}
+                      onChange={(e) => setApplicantRole(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-input)',
+                        color: '#ffffff',
+                        fontSize: '0.86rem'
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <select
-                    value={applicantRole}
-                    onChange={(e) => setApplicantRole(e.target.value)}
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text-main)',
-                      fontSize: '0.86rem'
-                    }}
-                  >
-                    <option value="Jefe de Grupo Scout">Jefe de Grupo Scout</option>
-                    <option value="Director Escolar / Rector">Director Escolar / Rector</option>
-                    <option value="Coordinador Pedagógico">Coordinador Pedagógico</option>
-                    <option value="Subjefe de Grupo">Subjefe de Grupo</option>
-                  </select>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Teléfono / WhatsApp Oficial *
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Ej: +54 9 11 5566-7788"
+                      value={instPhone}
+                      onChange={(e) => setInstPhone(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-input)',
+                        color: '#ffffff',
+                        fontSize: '0.86rem'
+                      }}
+                    />
+                  </div>
 
-                  <input
-                    type="tel"
-                    placeholder="Teléfono / WhatsApp Oficial"
-                    value={instPhone}
-                    onChange={(e) => setInstPhone(e.target.value)}
-                    style={{
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-color)',
-                      background: 'var(--bg-input)',
-                      color: 'var(--text-main)',
-                      fontSize: '0.86rem'
-                    }}
-                  />
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.25rem' }}>
+                      Email Institucional Oficial
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="contacto@institucion.org"
+                      value={instEmail}
+                      onChange={(e) => setInstEmail(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-input)',
+                        color: '#ffffff',
+                        fontSize: '0.86rem'
+                      }}
+                    />
+                  </div>
                 </div>
-
-                <input
-                  type="email"
-                  placeholder="Email Institucional Oficial"
-                  value={instEmail}
-                  onChange={(e) => setInstEmail(e.target.value)}
-                  style={{
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-color)',
-                    background: 'var(--bg-input)',
-                    color: 'var(--text-main)',
-                    fontSize: '0.86rem'
-                  }}
-                />
               </div>
 
               <div>
